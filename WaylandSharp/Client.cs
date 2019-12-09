@@ -8,9 +8,17 @@ namespace WaylandSharp {
 	public class Client {
 		internal readonly WlSocket Socket;
 		readonly Dictionary<uint, IWaylandObject> Objects = new Dictionary<uint, IWaylandObject>();
+
+		uint _Serial = 0;
+		public uint Serial => _Serial++;
+
+		public readonly WlDisplay Display;
+		public readonly WlRegistry Registry;
+		
 		public Client(WlSocket socket) {
 			Socket = socket;
-			Objects[1] = new WlDisplay(this, 1);
+			Objects[1] = Display = new WlDisplay(this, 1);
+			Registry = new WlRegistry(this);
 		}
 
 		internal void Start() =>
@@ -28,7 +36,9 @@ namespace WaylandSharp {
 					Console.WriteLine($"Got request for id 0x{id:X}!");
 					Console.ReadLine();
 					
-					DisplayServer.Instance.WorkQueue.Enqueue((GetObject<IWaylandObject>(id), opcode, length, cbt));
+					Debug.Assert(length >= 8);
+					
+					DisplayServer.Instance.WorkQueue.Enqueue((GetObject<IWaylandObject>(id), opcode, length - 8, cbt));
 					
 					cbt.Task.Wait();
 					if(cbt.Task.Result != null)
@@ -47,5 +57,7 @@ namespace WaylandSharp {
 			obj.Id = id;
 			obj.Setup();
 		}
+
+		public void AddGlobal(IWaylandObject obj) => Registry.Add(obj);
 	}
 }

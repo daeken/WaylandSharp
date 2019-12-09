@@ -10,10 +10,12 @@ namespace WaylandSharp {
 		public static DisplayServer Instance;
 		readonly WlSocket ServerSocket;
 		public readonly List<Client> Clients = new List<Client>();
-
+		
 		public readonly ConcurrentQueue<(IWaylandObject Object, uint Opcode, uint Length,
 			TaskCompletionSource<Exception> Cb)> WorkQueue =
 			new ConcurrentQueue<(IWaylandObject, uint, uint, TaskCompletionSource<Exception>)>();
+
+		public event Action<Client> NewClient;
 		
 		public DisplayServer(string path = null) {
 			Instance = this;
@@ -37,6 +39,9 @@ namespace WaylandSharp {
 			}
 		}
 
-		public void AddClient(Client client) => Clients.Add(client);
+		public void AddClient(Client client) {
+			Clients.Add(client);
+			NewClient?.Invoke(client);
+		}
 	}
 }

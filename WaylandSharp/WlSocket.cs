@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Net.Sockets;
 using System.Threading;
 using Mono.Unix;
@@ -8,6 +9,10 @@ namespace WaylandSharp {
 	public class WlSocket {
 		readonly Socket Socket;
 		internal WlSocket(string path) {
+			try {
+				File.Delete(path);
+			} catch(Exception) {
+			}
 			Socket = new Socket(AddressFamily.Unix, SocketType.Stream, 0);
 			Socket.Bind(new UnixEndPoint(path));
 			Socket.Listen(10);
@@ -59,6 +64,8 @@ namespace WaylandSharp {
 					offset += (int) size;
 					alen -= (int) size;
 				}
+			Console.WriteLine($"Read from the socket");
+			buffer.Hexdump();
 		}
 
 		public unsafe void WriteWithFd(byte[] buffer, int fd) {

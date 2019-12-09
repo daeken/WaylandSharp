@@ -18,7 +18,7 @@ namespace WaylandSharp {
 		internal static string ReadString(byte[] buf, ref int offset) {
 			var sbuf = ReadArray(buf, ref offset);
 			Debug.Assert(sbuf[sbuf.Length - 1] == 0);
-			return Encoding.ASCII.GetString(sbuf, 0, sbuf.Length - 1);
+			return Encoding.UTF8.GetString(sbuf, 0, sbuf.Length - 1);
 		}
 
 		internal static uint ReadUint(byte[] buf, ref int offset) {
@@ -34,7 +34,7 @@ namespace WaylandSharp {
 		}
 
 		internal static int StringSize(string data) {
-			var len = 4 + Encoding.ASCII.GetBytes(data).Length;
+			var len = 4 + Encoding.UTF8.GetBytes(data).Length + 1;
 			while((len & 3) != 0)
 				len++;
 			return len;
@@ -51,10 +51,10 @@ namespace WaylandSharp {
 		}
 
 		internal static void WriteString(byte[] buf, ref int offset, string val) {
-			var data = Encoding.ASCII.GetBytes(val + '\0');
-			Array.Copy(buf, offset, BitConverter.GetBytes(data.Length), 0, 4);
+			var data = Encoding.UTF8.GetBytes(val + '\0');
+			Array.Copy(BitConverter.GetBytes(data.Length), 0, buf, offset, 4);
 			offset += 4;
-			Array.Copy(buf, offset, data, 0, data.Length);
+			Array.Copy(data, 0, buf, offset, data.Length);
 			offset += data.Length;
 			while((offset & 3) != 0)
 				offset++;

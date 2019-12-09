@@ -42,14 +42,19 @@
     </ItemGroup>
     <ItemGroup>
         <Compile Include="Client.cs" />
+        <Compile Include="DenseIds.cs" />
         <Compile Include="DisplayServer.cs" />
+        <Compile Include="Extensions.cs" />
         <Compile Include="Fixed.cs" />
         <Compile Include="Generated.cs" />
         <Compile Include="Helper.cs" />
         <Compile Include="IWaylandObject.cs" />
         <Compile Include="Properties\AssemblyInfo.cs" />
+        <Compile Include="WlCallback.cs" />
         <Compile Include="WlDisplay.cs" />
+        <Compile Include="WlOutput.cs" />
         <Compile Include="WlRegistry.cs" />
+        <Compile Include="WlShm.cs" />
         <Compile Include="WlSocket.cs" />
     </ItemGroup>
     <ItemGroup>

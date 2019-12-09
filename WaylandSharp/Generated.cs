@@ -12,6 +12,8 @@ namespace WaylandSharp.Generated {
 	/// is used for internal Wayland protocol features.
 	/// </remarks>
 	public abstract class IWlDisplay : IWaylandObject {
+		public override string InterfaceName => "wl_display";
+		public override int InterfaceVersion => 1;
 		protected IWlDisplay(Client owner, uint? id) : base(owner, id) {}
 		public static class Enum {
 			/// <summary>
@@ -46,18 +48,16 @@ namespace WaylandSharp.Generated {
 			switch(opcode) {
 				case 0: {
 					Owner.Socket.Read(tbuf);
-					var pre_callback = _offset;
-					_offset += 4;
+					var callback_newid = Helper.ReadUint(tbuf, ref _offset);
 					Sync(out var callback);
-					Owner.SetObject(BitConverter.ToUInt32(tbuf, pre_callback), callback);
+					Owner.SetObject(callback_newid, callback);
 					break;
 				}
 				case 1: {
 					Owner.Socket.Read(tbuf);
-					var pre_registry = _offset;
-					_offset += 4;
+					var registry_newid = Helper.ReadUint(tbuf, ref _offset);
 					GetRegistry(out var registry);
-					Owner.SetObject(BitConverter.ToUInt32(tbuf, pre_registry), registry);
+					Owner.SetObject(registry_newid, registry);
 					break;
 				}
 			}
@@ -169,6 +169,8 @@ namespace WaylandSharp.Generated {
 	/// the object.
 	/// </remarks>
 	public abstract class IWlRegistry : IWaylandObject {
+		public override string InterfaceName => "wl_registry";
+		public override int InterfaceVersion => 1;
 		protected IWlRegistry(Client owner, uint? id) : base(owner, id) {}
 		internal override void ProcessRequest(int opcode, int mlen) {
 			var tbuf = new byte[mlen];
@@ -177,10 +179,11 @@ namespace WaylandSharp.Generated {
 				case 0: {
 					Owner.Socket.Read(tbuf);
 					var name = (uint) Helper.ReadUint(tbuf, ref _offset);
-					var pre_id = _offset;
-					_offset += 4;
+					var id_iname = Helper.ReadString(tbuf, ref _offset);
+					var id_version = Helper.ReadUint(tbuf, ref _offset);
+					var id_newid = Helper.ReadUint(tbuf, ref _offset);
 					Bind(name, out var id);
-					Owner.SetObject(BitConverter.ToUInt32(tbuf, pre_id), id);
+					Owner.SetObject(id_newid, id);
 					break;
 				}
 			}
@@ -253,20 +256,12 @@ namespace WaylandSharp.Generated {
 	/// the related request is done.
 	/// </remarks>
 	public abstract class IWlCallback : IWaylandObject {
+		public override string InterfaceName => "wl_callback";
+		public override int InterfaceVersion => 1;
 		protected IWlCallback(Client owner, uint? id) : base(owner, id) {}
 		internal override void ProcessRequest(int opcode, int mlen) {
 			throw new NotSupportedException();
 		}
-		/// <summary>
-		/// Bind an object to the display
-		/// </summary>
-		/// <remarks>
-		/// Binds a new, client-created object to the server using the
-		/// specified name as the identifier.
-		/// </remarks>
-		/// <param name="name">Unique numeric name of the object</param>
-		/// <param name="id">Bounded object</param>
-		public abstract void Bind(uint name, out IWaylandObject id);
 		/// <summary>
 		/// Done event
 		/// </summary>
@@ -292,6 +287,8 @@ namespace WaylandSharp.Generated {
 	/// surfaces into one displayable output.
 	/// </remarks>
 	public abstract class IWlCompositor : IWaylandObject {
+		public override string InterfaceName => "wl_compositor";
+		public override int InterfaceVersion => 4;
 		protected IWlCompositor(Client owner, uint? id) : base(owner, id) {}
 		internal override void ProcessRequest(int opcode, int mlen) {
 			var tbuf = new byte[mlen];
@@ -299,18 +296,16 @@ namespace WaylandSharp.Generated {
 			switch(opcode) {
 				case 0: {
 					Owner.Socket.Read(tbuf);
-					var pre_id = _offset;
-					_offset += 4;
+					var id_newid = Helper.ReadUint(tbuf, ref _offset);
 					CreateSurface(out var id);
-					Owner.SetObject(BitConverter.ToUInt32(tbuf, pre_id), id);
+					Owner.SetObject(id_newid, id);
 					break;
 				}
 				case 1: {
 					Owner.Socket.Read(tbuf);
-					var pre_id = _offset;
-					_offset += 4;
+					var id_newid = Helper.ReadUint(tbuf, ref _offset);
 					CreateRegion(out var id);
-					Owner.SetObject(BitConverter.ToUInt32(tbuf, pre_id), id);
+					Owner.SetObject(id_newid, id);
 					break;
 				}
 			}
@@ -345,6 +340,8 @@ namespace WaylandSharp.Generated {
 	/// a surface or for many small buffers.
 	/// </remarks>
 	public abstract class IWlShmPool : IWaylandObject {
+		public override string InterfaceName => "wl_shm_pool";
+		public override int InterfaceVersion => 1;
 		protected IWlShmPool(Client owner, uint? id) : base(owner, id) {}
 		internal override void ProcessRequest(int opcode, int mlen) {
 			var tbuf = new byte[mlen];
@@ -352,15 +349,14 @@ namespace WaylandSharp.Generated {
 			switch(opcode) {
 				case 0: {
 					Owner.Socket.Read(tbuf);
-					var pre_id = _offset;
-					_offset += 4;
+					var id_newid = Helper.ReadUint(tbuf, ref _offset);
 					var offset = (int) Helper.ReadInt(tbuf, ref _offset);
 					var width = (int) Helper.ReadInt(tbuf, ref _offset);
 					var height = (int) Helper.ReadInt(tbuf, ref _offset);
 					var stride = (int) Helper.ReadInt(tbuf, ref _offset);
 					var format = (IWlShm.Enum.Format) Helper.ReadUint(tbuf, ref _offset);
 					CreateBuffer(out var id, offset, width, height, stride, format);
-					Owner.SetObject(BitConverter.ToUInt32(tbuf, pre_id), id);
+					Owner.SetObject(id_newid, id);
 					break;
 				}
 				case 1: {
@@ -437,6 +433,8 @@ namespace WaylandSharp.Generated {
 	/// that can be used for buffers.
 	/// </remarks>
 	public abstract class IWlShm : IWaylandObject {
+		public override string InterfaceName => "wl_shm";
+		public override int InterfaceVersion => 1;
 		protected IWlShm(Client owner, uint? id) : base(owner, id) {}
 		public static class Enum {
 			/// <summary>
@@ -852,11 +850,10 @@ namespace WaylandSharp.Generated {
 			switch(opcode) {
 				case 0: {
 					var fd = (IntPtr) Owner.Socket.ReadWithFd(tbuf);
-					var pre_id = _offset;
-					_offset += 4;
+					var id_newid = Helper.ReadUint(tbuf, ref _offset);
 					var size = (int) Helper.ReadInt(tbuf, ref _offset);
 					CreatePool(out var id, fd, size);
-					Owner.SetObject(BitConverter.ToUInt32(tbuf, pre_id), id);
+					Owner.SetObject(id_newid, id);
 					break;
 				}
 			}
@@ -904,6 +901,8 @@ namespace WaylandSharp.Generated {
 	/// updates the contents is defined by the buffer factory interface.
 	/// </remarks>
 	public abstract class IWlBuffer : IWaylandObject {
+		public override string InterfaceName => "wl_buffer";
+		public override int InterfaceVersion => 1;
 		protected IWlBuffer(Client owner, uint? id) : base(owner, id) {}
 		internal override void ProcessRequest(int opcode, int mlen) {
 			var tbuf = new byte[mlen];
@@ -962,6 +961,8 @@ namespace WaylandSharp.Generated {
 	/// data directly from the source client.
 	/// </remarks>
 	public abstract class IWlDataOffer : IWaylandObject {
+		public override string InterfaceName => "wl_data_offer";
+		public override int InterfaceVersion => 3;
 		protected IWlDataOffer(Client owner, uint? id) : base(owner, id) {}
 		public static class Enum {
 			public enum Error {
@@ -1223,6 +1224,8 @@ namespace WaylandSharp.Generated {
 	/// to requests to transfer the data.
 	/// </remarks>
 	public abstract class IWlDataSource : IWaylandObject {
+		public override string InterfaceName => "wl_data_source";
+		public override int InterfaceVersion => 3;
 		protected IWlDataSource(Client owner, uint? id) : base(owner, id) {}
 		public static class Enum {
 			public enum Error {
@@ -1452,6 +1455,8 @@ namespace WaylandSharp.Generated {
 	/// mechanisms such as copy-and-paste and drag-and-drop.
 	/// </remarks>
 	public abstract class IWlDataDevice : IWaylandObject {
+		public override string InterfaceName => "wl_data_device";
+		public override int InterfaceVersion => 3;
 		protected IWlDataDevice(Client owner, uint? id) : base(owner, id) {}
 		public static class Enum {
 			public enum Error {
@@ -1699,6 +1704,8 @@ namespace WaylandSharp.Generated {
 	/// wl_data_offer.accept and wl_data_offer.finish for details.
 	/// </remarks>
 	public abstract class IWlDataDeviceManager : IWaylandObject {
+		public override string InterfaceName => "wl_data_device_manager";
+		public override int InterfaceVersion => 3;
 		protected IWlDataDeviceManager(Client owner, uint? id) : base(owner, id) {}
 		public static class Enum {
 			/// <summary>
@@ -1755,19 +1762,17 @@ namespace WaylandSharp.Generated {
 			switch(opcode) {
 				case 0: {
 					Owner.Socket.Read(tbuf);
-					var pre_id = _offset;
-					_offset += 4;
+					var id_newid = Helper.ReadUint(tbuf, ref _offset);
 					CreateDataSource(out var id);
-					Owner.SetObject(BitConverter.ToUInt32(tbuf, pre_id), id);
+					Owner.SetObject(id_newid, id);
 					break;
 				}
 				case 1: {
 					Owner.Socket.Read(tbuf);
-					var pre_id = _offset;
-					_offset += 4;
+					var id_newid = Helper.ReadUint(tbuf, ref _offset);
 					var seat = Owner.GetObject<IWlSeat>(Helper.ReadUint(tbuf, ref _offset));
 					GetDataDevice(out var id, seat);
-					Owner.SetObject(BitConverter.ToUInt32(tbuf, pre_id), id);
+					Owner.SetObject(id_newid, id);
 					break;
 				}
 			}
@@ -1804,6 +1809,8 @@ namespace WaylandSharp.Generated {
 	/// For desktop-style user interfaces, use xdg_shell.
 	/// </remarks>
 	public abstract class IWlShell : IWaylandObject {
+		public override string InterfaceName => "wl_shell";
+		public override int InterfaceVersion => 1;
 		protected IWlShell(Client owner, uint? id) : base(owner, id) {}
 		public static class Enum {
 			public enum Error {
@@ -1819,11 +1826,10 @@ namespace WaylandSharp.Generated {
 			switch(opcode) {
 				case 0: {
 					Owner.Socket.Read(tbuf);
-					var pre_id = _offset;
-					_offset += 4;
+					var id_newid = Helper.ReadUint(tbuf, ref _offset);
 					var surface = Owner.GetObject<IWlSurface>(Helper.ReadUint(tbuf, ref _offset));
 					GetShellSurface(out var id, surface);
-					Owner.SetObject(BitConverter.ToUInt32(tbuf, pre_id), id);
+					Owner.SetObject(id_newid, id);
 					break;
 				}
 			}
@@ -1859,6 +1865,8 @@ namespace WaylandSharp.Generated {
 	/// the wl_surface object.
 	/// </remarks>
 	public abstract class IWlShellSurface : IWaylandObject {
+		public override string InterfaceName => "wl_shell_surface";
+		public override int InterfaceVersion => 1;
 		protected IWlShellSurface(Client owner, uint? id) : base(owner, id) {}
 		public static class Enum {
 			/// <summary>
@@ -2330,6 +2338,8 @@ namespace WaylandSharp.Generated {
 	/// switching is not allowed).
 	/// </remarks>
 	public abstract class IWlSurface : IWaylandObject {
+		public override string InterfaceName => "wl_surface";
+		public override int InterfaceVersion => 4;
 		protected IWlSurface(Client owner, uint? id) : base(owner, id) {}
 		public static class Enum {
 			/// <summary>
@@ -2377,10 +2387,9 @@ namespace WaylandSharp.Generated {
 				}
 				case 3: {
 					Owner.Socket.Read(tbuf);
-					var pre_callback = _offset;
-					_offset += 4;
+					var callback_newid = Helper.ReadUint(tbuf, ref _offset);
 					Frame(out var callback);
-					Owner.SetObject(BitConverter.ToUInt32(tbuf, pre_callback), callback);
+					Owner.SetObject(callback_newid, callback);
 					break;
 				}
 				case 4: {
@@ -2792,6 +2801,8 @@ namespace WaylandSharp.Generated {
 	/// maintains a keyboard focus and a pointer focus.
 	/// </remarks>
 	public abstract class IWlSeat : IWaylandObject {
+		public override string InterfaceName => "wl_seat";
+		public override int InterfaceVersion => 7;
 		protected IWlSeat(Client owner, uint? id) : base(owner, id) {}
 		public static class Enum {
 			/// <summary>
@@ -2823,26 +2834,23 @@ namespace WaylandSharp.Generated {
 			switch(opcode) {
 				case 0: {
 					Owner.Socket.Read(tbuf);
-					var pre_id = _offset;
-					_offset += 4;
+					var id_newid = Helper.ReadUint(tbuf, ref _offset);
 					GetPointer(out var id);
-					Owner.SetObject(BitConverter.ToUInt32(tbuf, pre_id), id);
+					Owner.SetObject(id_newid, id);
 					break;
 				}
 				case 1: {
 					Owner.Socket.Read(tbuf);
-					var pre_id = _offset;
-					_offset += 4;
+					var id_newid = Helper.ReadUint(tbuf, ref _offset);
 					GetKeyboard(out var id);
-					Owner.SetObject(BitConverter.ToUInt32(tbuf, pre_id), id);
+					Owner.SetObject(id_newid, id);
 					break;
 				}
 				case 2: {
 					Owner.Socket.Read(tbuf);
-					var pre_id = _offset;
-					_offset += 4;
+					var id_newid = Helper.ReadUint(tbuf, ref _offset);
 					GetTouch(out var id);
-					Owner.SetObject(BitConverter.ToUInt32(tbuf, pre_id), id);
+					Owner.SetObject(id_newid, id);
 					break;
 				}
 				case 3: {
@@ -2972,6 +2980,8 @@ namespace WaylandSharp.Generated {
 	/// and scrolling.
 	/// </remarks>
 	public abstract class IWlPointer : IWaylandObject {
+		public override string InterfaceName => "wl_pointer";
+		public override int InterfaceVersion => 7;
 		protected IWlPointer(Client owner, uint? id) : base(owner, id) {}
 		public static class Enum {
 			public enum Error {
@@ -3439,6 +3449,8 @@ namespace WaylandSharp.Generated {
 	/// associated with a seat.
 	/// </remarks>
 	public abstract class IWlKeyboard : IWaylandObject {
+		public override string InterfaceName => "wl_keyboard";
+		public override int InterfaceVersion => 7;
 		protected IWlKeyboard(Client owner, uint? id) : base(owner, id) {}
 		public static class Enum {
 			/// <summary>
@@ -3657,6 +3669,8 @@ namespace WaylandSharp.Generated {
 	/// contact point can be identified by the ID of the sequence.
 	/// </remarks>
 	public abstract class IWlTouch : IWaylandObject {
+		public override string InterfaceName => "wl_touch";
+		public override int InterfaceVersion => 7;
 		protected IWlTouch(Client owner, uint? id) : base(owner, id) {}
 		internal override void ProcessRequest(int opcode, int mlen) {
 			var tbuf = new byte[mlen];
@@ -3890,6 +3904,8 @@ namespace WaylandSharp.Generated {
 	/// as global during start up, or when a monitor is hotplugged.
 	/// </remarks>
 	public abstract class IWlOutput : IWaylandObject {
+		public override string InterfaceName => "wl_output";
+		public override int InterfaceVersion => 3;
 		protected IWlOutput(Client owner, uint? id) : base(owner, id) {}
 		public static class Enum {
 			/// <summary>
@@ -4169,6 +4185,8 @@ namespace WaylandSharp.Generated {
 	/// regions of a surface.
 	/// </remarks>
 	public abstract class IWlRegion : IWaylandObject {
+		public override string InterfaceName => "wl_region";
+		public override int InterfaceVersion => 1;
 		protected IWlRegion(Client owner, uint? id) : base(owner, id) {}
 		internal override void ProcessRequest(int opcode, int mlen) {
 			var tbuf = new byte[mlen];
@@ -4254,6 +4272,8 @@ namespace WaylandSharp.Generated {
 	/// processing to dedicated overlay hardware when possible.
 	/// </remarks>
 	public abstract class IWlSubcompositor : IWaylandObject {
+		public override string InterfaceName => "wl_subcompositor";
+		public override int InterfaceVersion => 1;
 		protected IWlSubcompositor(Client owner, uint? id) : base(owner, id) {}
 		public static class Enum {
 			public enum Error {
@@ -4274,12 +4294,11 @@ namespace WaylandSharp.Generated {
 				}
 				case 1: {
 					Owner.Socket.Read(tbuf);
-					var pre_id = _offset;
-					_offset += 4;
+					var id_newid = Helper.ReadUint(tbuf, ref _offset);
 					var surface = Owner.GetObject<IWlSurface>(Helper.ReadUint(tbuf, ref _offset));
 					var parent = Owner.GetObject<IWlSurface>(Helper.ReadUint(tbuf, ref _offset));
 					GetSubsurface(out var id, surface, parent);
-					Owner.SetObject(BitConverter.ToUInt32(tbuf, pre_id), id);
+					Owner.SetObject(id_newid, id);
 					break;
 				}
 			}
@@ -4373,6 +4392,8 @@ namespace WaylandSharp.Generated {
 	/// unmapped.
 	/// </remarks>
 	public abstract class IWlSubsurface : IWaylandObject {
+		public override string InterfaceName => "wl_subsurface";
+		public override int InterfaceVersion => 1;
 		protected IWlSubsurface(Client owner, uint? id) : base(owner, id) {}
 		public static class Enum {
 			public enum Error {

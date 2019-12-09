@@ -7,6 +7,8 @@ namespace WaylandSharp {
 		public readonly Client Owner;
 		public uint Id;
 		internal abstract void ProcessRequest(int opcode, int mlen);
+		public abstract string InterfaceName { get; }
+		public abstract int InterfaceVersion { get; }
 
 		public IWaylandObject(Client owner, uint? id = null) {
 			Owner = owner;
@@ -21,6 +23,9 @@ namespace WaylandSharp {
 			Array.Copy(BitConverter.GetBytes(Id), 0, tbuf, 0, 4);
 			Array.Copy(BitConverter.GetBytes(((uint) tbuf.Length << 16) | (uint) opcode), 0, tbuf, 4, 4);
 			Array.Copy(buf, 0, tbuf, 8, buf.Length);
+			Console.WriteLine($"Writing buffer for event opcode {opcode} on object 0x{Id:X}");
+			tbuf.Hexdump();
+			Console.ReadLine();
 			Owner.Socket.Write(tbuf);
 		}
 

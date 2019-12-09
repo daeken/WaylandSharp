@@ -52,6 +52,8 @@ def generate(fn):
 		doc('\t', interface)
 		iname = 'I' + rename(interface.getAttribute('name'))
 		print '\tpublic abstract class %s : IWaylandObject {' % iname
+		print '\t\tpublic override string InterfaceName => "%s";' % interface.getAttribute('name')
+		print '\t\tpublic override int InterfaceVersion => %s;' % interface.getAttribute('version')
 		print '\t\tprotected %s(Client owner, uint? id) : base(owner, id) {}' % iname
 		if len(interface.getElementsByTagName('enum')):
 			print '\t\tpublic static class Enum {'
@@ -68,13 +70,13 @@ def generate(fn):
 				print '\t\t\t}'
 			print '\t\t}'
 		print '\t\tinternal override void ProcessRequest(int opcode, int mlen) {'
+		requests = []
 		if len(interface.getElementsByTagName('request')) == 0:
 			print '\t\t\tthrow new NotSupportedException();'
 		else:
 			print '\t\t\tvar tbuf = new byte[mlen];'
 			print '\t\t\tvar _offset = 0;'
 			print '\t\t\tswitch(opcode) {'
-			requests = []
 			for opcode, request in enumerate(interface.getElementsByTagName('request')):
 				rname = rename(request.getAttribute('name'))
 				args = []
@@ -105,10 +107,16 @@ def generate(fn):
 							print '\t\t\t\t\tvar %s = Owner.GetObject<%s>(Helper.ReadUint(tbuf, ref _offset));' % (name, ctype)
 							cargs.append(name)
 						else:
-							print '\t\t\t\t\tvar pre_%s = _offset;' % name
-							print '\t\t\t\t\t_offset += 4;'
+							if ctype == 'IWaylandObject':
+								#ctype = 'NewIdUnknown'
+								print '\t\t\t\t\tvar %s_iname = Helper.ReadString(tbuf, ref _offset);' % name
+								print '\t\t\t\t\tvar %s_version = Helper.ReadUint(tbuf, ref _offset);' % name
+								print '\t\t\t\t\tvar %s_newid = Helper.ReadUint(tbuf, ref _offset);' % name
+								#cargs.append('new NewIdUnknown(%s_iname, %s_version, %s_newid)' % (name, name, name))
+							else:
+								print '\t\t\t\t\tvar %s_newid = Helper.ReadUint(tbuf, ref _offset);' % name
 							cargs.append('out var %s' % name)
-							outObjs.append('Owner.SetObject(BitConverter.ToUInt32(tbuf, pre_%s), %s);' % (name, name))
+							outObjs.append('Owner.SetObject(%s_newid, %s);' % (name, name))
 					elif type == 'int' or type == 'uint':
 						ctype = type
 						enum = arg.getAttribute('enum')
