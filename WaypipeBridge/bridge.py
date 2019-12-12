@@ -1,7 +1,6 @@
-import os, os.path, sys, tempfile
+import os, os.path, struct, sys, tempfile
 from socket import *
 from select import select
-from struct import pack, unpack
 from subprocess import Popen, PIPE
 
 def run(sock, host):
@@ -11,17 +10,20 @@ def run(sock, host):
 	usock = socket(AF_UNIX, SOCK_STREAM)
 	spath = os.path.join(tempfile.mkdtemp(), 'serversock')
 	usock.bind(spath)
+	usock.listen(100)
 	wpi = Popen(['waypipe', 'server', '-S', spath, '--', 'weston-terminal'], stdout=PIPE, stderr=PIPE)
 	bc = []
 	bcm = {}
 	while True:
 		rlist, _, xlist = select([wpi.stdout, wpi.stderr, sock, usock] + bc, (), ())
+		if not wpi.poll() is None:
+			return
 		if sock in rlist or sock in xlist: # Either it sent something we don't know, or it disconnected
 			break
 		if wpi.stdout in rlist:
 			sock.send('\0' + wpi.stdout.read(1))
 		if wpi.stderr in rlist:
-			sock.send('\1', wpi.stderr.read(1))
+			sock.send('\x01' + wpi.stderr.read(1))
 		if usock in rlist:
 			nuc, _ = usock.accept()
 			nuc.setblocking(0)
