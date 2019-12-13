@@ -17,7 +17,7 @@ namespace WaylandSharp {
 
 		internal static string ReadString(byte[] buf, ref int offset) {
 			var sbuf = ReadArray(buf, ref offset);
-			Debug.Assert(sbuf[sbuf.Length - 1] == 0);
+			AssertEqual((uint) sbuf[sbuf.Length - 1], 0U);
 			return Encoding.UTF8.GetString(sbuf, 0, sbuf.Length - 1);
 		}
 
@@ -35,6 +35,13 @@ namespace WaylandSharp {
 
 		internal static int StringSize(string data) {
 			var len = 4 + Encoding.UTF8.GetBytes(data).Length + 1;
+			while((len & 3) != 0)
+				len++;
+			return len;
+		}
+
+		internal static int ArraySize(byte[] data) {
+			var len = 4 + data.Length;
 			while((len & 3) != 0)
 				len++;
 			return len;
@@ -60,10 +67,30 @@ namespace WaylandSharp {
 				offset++;
 		}
 
-		internal static void Bailout(string msg) {
-			Console.WriteLine(msg);
-			Console.ReadLine();
-			throw new NotImplementedException();
+		internal static void WriteArray(byte[] buf, ref int offset, byte[] data) {
+			Array.Copy(BitConverter.GetBytes(data.Length), 0, buf, offset, 4);
+			offset += 4;
+			Array.Copy(data, 0, buf, offset, data.Length);
+			offset += data.Length;
+			while((offset & 3) != 0)
+				offset++;
 		}
+
+		internal static void Assert(bool expr) {
+			if(!expr)
+				throw new Exception("Assertion failed!");
+		}
+
+		internal static void AssertEqual(int left, int right) {
+			if(left != right)
+				throw new Exception($"Assertion failed: {left} != {right}");
+		}
+		
+		internal static void AssertEqual(uint left, uint right) {
+			if(left != right)
+				throw new Exception($"Assertion failed: 0x{left:X} != 0x{right:X}");
+		}
+
+		internal static void Log<T>(T log) => DisplayServer.Instance.Log(log.ToString());
 	}
 }

@@ -1,29 +1,27 @@
 import os, os.path, struct, sys, tempfile
 from socket import *
 from select import select
-from subprocess import Popen, PIPE
+from subprocess import Popen, PIPE, STDOUT
 
 def run(sock, host):
 	assert struct.unpack('I', sock.recv(4))[0] == 0xDEADBEEF
 	tport, = struct.unpack('H', sock.recv(2))
+	cmdlen, = struct.unpack('I', sock.recv(4))
+	cmd = sock.recv(cmdlen)
 
 	usock = socket(AF_UNIX, SOCK_STREAM)
 	spath = os.path.join(tempfile.mkdtemp(), 'serversock')
 	usock.bind(spath)
 	usock.listen(100)
-	wpi = Popen(['waypipe', 'server', '-S', spath, '--', 'weston-terminal'], stdout=PIPE, stderr=PIPE)
+	wpi = Popen(['waypipe', '-s', spath, 'server', '--', cmd])
 	bc = []
 	bcm = {}
 	while True:
-		rlist, _, xlist = select([wpi.stdout, wpi.stderr, sock, usock] + bc, (), ())
+		rlist, _, xlist = select([sock, usock] + bc, (), ())
 		if not wpi.poll() is None:
 			return
 		if sock in rlist or sock in xlist: # Either it sent something we don't know, or it disconnected
 			break
-		if wpi.stdout in rlist:
-			sock.send('\0' + wpi.stdout.read(1))
-		if wpi.stderr in rlist:
-			sock.send('\x01' + wpi.stderr.read(1))
 		if usock in rlist:
 			nuc, _ = usock.accept()
 			nuc.setblocking(0)
@@ -53,10 +51,18 @@ def run(sock, host):
 			if csock.fileno() in bcm:
 				cp = bcm[csock.fileno()]
 				while True:
-					data = csock.recv(1024)
-					if len(data) == 0:
+					try:
+						data = csock.recv(1024)
+						if len(data) == 0:
+							break
+					except:
 						break
-					assert cp.send(data) == len(data)
+					off = 0
+					while off < len(data):
+						try:
+							off += cp.send(data[off:])
+						except:
+							pass
 
 def main(port):
 	server = socket(AF_INET, SOCK_STREAM)

@@ -11,14 +11,13 @@ namespace WaylandSharp {
 		public WlRegistry(Client owner, uint? id = null) : base(owner, id) { }
 
 		internal override void Setup() {
-			Console.WriteLine("wl_registry setup???");
+			Helper.Log("wl_registry setup???");
 			BeenSetup = true;
 			foreach(var elem in Globals)
 				Global(elem.Key, elem.Value.InterfaceName, (uint) elem.Value.InterfaceVersion);
 		}
 
-		public override void Bind(uint name, out IWaylandObject id) =>
-			id = Globals[name];
+		public override IWaylandObject Bind(uint name) => Globals[name];
 
 		internal void Add(IWaylandObject obj) {
 			var name = Ids.Next();

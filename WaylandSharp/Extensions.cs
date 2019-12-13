@@ -1,25 +1,38 @@
 using System;
 using System.Linq;
+using System.Net.Sockets;
 
 namespace WaylandSharp {
 	internal static class Extensions {
 		const string Printable = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-[]{}`~!@#$%^&*()-=\\|;:'\",./<>?";
 		internal static void Hexdump(this byte[] buffer) {
+			var ret = "";
 			for(var i = 0; i < buffer.Length; i += 16) {
-				Console.Write($"{i:X4} | ");
+				ret += $"{i:X4} | ";
 				for(var j = 0; j < 16; ++j) {
-					Console.Write(i + j >= buffer.Length ? $"   " : $"{buffer[i + j]:X2} ");
-					if(j == 7) Console.Write(" ");
+					ret += i + j >= buffer.Length ? $"   " : $"{buffer[i + j]:X2} ";
+					if(j == 7) ret += " ";
 				}
-				Console.Write("| ");
+				ret += "| ";
 				for(var j = 0; j < 16; ++j) {
 					if(i + j >= buffer.Length) break;
-					Console.Write(Printable.Contains((char) buffer[i + j]) ? new string((char) buffer[i + j], 1) : ".");
-					if(j == 7) Console.Write(" ");
+					ret += Printable.Contains((char) buffer[i + j]) ? new string((char) buffer[i + j], 1) : ".";
+					if(j == 7) ret += " ";
 				}
-				Console.WriteLine();
+				Helper.Log(ret);
 			}
-			Console.WriteLine($"{buffer.Length:X4}");
+			Helper.Log($"{buffer.Length:X4}");
+		}
+
+		internal static void ReceiveAll(this Socket socket, byte[] buf) {
+			var tlen = buf.Length;
+			var offset = 0;
+			while(tlen > 0) {
+				var rlen = socket.Receive(buf, offset, tlen, SocketFlags.None);
+				if(rlen < 0) throw new Exception();
+				offset += rlen;
+				tlen -= rlen;
+			}
 		}
 	}
 }

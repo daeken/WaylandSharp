@@ -69,12 +69,11 @@ def generate(fn):
 					print '\t\t\t\t%s = %s,' % (rename(elem.getAttribute('name')), elem.getAttribute('value'))
 				print '\t\t\t}'
 			print '\t\t}'
-		print '\t\tinternal override void ProcessRequest(int opcode, int mlen) {'
+		print '\t\tinternal override void ProcessRequest(int opcode, byte[] tbuf) {'
 		requests = []
 		if len(interface.getElementsByTagName('request')) == 0:
 			print '\t\t\tthrow new NotSupportedException();'
 		else:
-			print '\t\t\tvar tbuf = new byte[mlen];'
 			print '\t\t\tvar _offset = 0;'
 			print '\t\t\tswitch(opcode) {'
 			for opcode, request in enumerate(interface.getElementsByTagName('request')):
@@ -83,17 +82,10 @@ def generate(fn):
 				cargs = []
 				hasFd = False
 				outObjs = []
+				ret_type = 'void'
+				ret_keep = None
+				outs = sum([1 for arg in request.getElementsByTagName('arg') if arg.getAttribute('type') == 'new_id'])
 				print '\t\t\t\tcase %i: {' % opcode
-				for arg in request.getElementsByTagName('arg'):
-					type = arg.getAttribute('type')
-					if type == 'fd':
-						ctype = 'IntPtr'
-						assert not hasFd
-						hasFd = True
-				if hasFd:
-					print '\t\t\t\t\tvar fd = (IntPtr) Owner.Socket.ReadWithFd(tbuf);'
-				else:
-					print '\t\t\t\t\tOwner.Socket.Read(tbuf);'
 				for arg in request.getElementsByTagName('arg'):
 					name = atName(arg.getAttribute('name'))
 					type = arg.getAttribute('type')
@@ -115,7 +107,11 @@ def generate(fn):
 								#cargs.append('new NewIdUnknown(%s_iname, %s_version, %s_newid)' % (name, name, name))
 							else:
 								print '\t\t\t\t\tvar %s_newid = Helper.ReadUint(tbuf, ref _offset);' % name
-							cargs.append('out var %s' % name)
+							if outs == 1:
+								ret_type = ctype
+								ret_keep = name
+							else:
+								cargs.append('out var %s' % name)
 							outObjs.append('Owner.SetObject(%s_newid, %s);' % (name, name))
 					elif type == 'int' or type == 'uint':
 						ctype = type
@@ -138,8 +134,8 @@ def generate(fn):
 						print '\t\t\t\t\tvar %s = Helper.ReadArray(tbuf, ref _offset);' % name
 						cargs.append(name)
 					elif type == 'fd':
-						ctype = 'IntPtr'
-						cargs.append('fd')
+						ctype = 'int'
+						cargs.append('Owner.GetNextFd()')
 					elif type == 'string':
 						ctype = 'string'
 						print '\t\t\t\t\tvar %s = Helper.ReadString(tbuf, ref _offset);' % name
@@ -147,13 +143,19 @@ def generate(fn):
 					else:
 						print type
 						assert False
-					args.append('%s%s %s' % ('out ' if type == 'new_id' else '', ctype, name))
-				print '\t\t\t\t\t%s(%s);' % (rname, ', '.join(cargs))
+					if type == 'new_id' and outs == 1:
+						pass
+					else:
+						args.append('%s%s %s' % ('out ' if type == 'new_id' else '', ctype, name))
+				if ret_keep is None:
+					print '\t\t\t\t\t%s(%s);' % (rname, ', '.join(cargs))
+				else:
+					print '\t\t\t\t\tvar %s = %s(%s);' % (ret_keep, rname, ', '.join(cargs))
 				for line in outObjs:
 					print '\t\t\t\t\t' + line
 				print '\t\t\t\t\tbreak;'
 				print '\t\t\t\t}'
-				requests.append((request, '\t\tpublic abstract void %s(%s);' % (rname, ', '.join(args))))
+				requests.append((request, '\t\tpublic abstract %s %s(%s);' % (ret_type, rname, ', '.join(args))))
 			print '\t\t\t}'
 		print '\t\t}'
 		for request, line in requests:
@@ -194,8 +196,10 @@ def generate(fn):
 					post.append('Helper.WriteUint(tbuf, ref _offset, %s.UintValue);' % name)
 				elif type == 'array':
 					ctype = 'byte[]'
+					pre.append('_offset += Helper.ArraySize(%s);' % name)
+					post.append('Helper.WriteArray(tbuf, ref _offset, %s);' % name)
 				elif type == 'fd':
-					ctype = 'IntPtr'
+					ctype = 'int'
 					assert not hasFd
 					hasFd = True
 					pre.append('var _fd = (int) %s;' % name)

@@ -5,6 +5,1375 @@ using System;
 using System.Threading.Tasks;
 namespace WaylandSharp.Generated {
 	/// <summary>
+	/// Create desktop-style surfaces
+	/// </summary>
+	/// <remarks>
+	/// xdg_shell allows clients to turn a wl_surface into a "real window"
+	/// which can be dragged, resized, stacked, and moved around by the
+	/// user. Everything about this interface is suited towards traditional
+	/// desktop environments.
+	/// </remarks>
+	public abstract class IZxdgShellV6 : IWaylandObject {
+		public override string InterfaceName => "zxdg_shell_v6";
+		public override int InterfaceVersion => 1;
+		protected IZxdgShellV6(Client owner, uint? id) : base(owner, id) {}
+		public static class Enum {
+			public enum Error {
+				/// <summary>
+				/// Given wl_surface has another role
+				/// </summary>
+				Role = 0,
+				/// <summary>
+				/// Xdg_shell was destroyed before children
+				/// </summary>
+				DefunctSurfaces = 1,
+				/// <summary>
+				/// The client tried to map or destroy a non-topmost popup
+				/// </summary>
+				NotTheTopmostPopup = 2,
+				/// <summary>
+				/// The client specified an invalid popup parent surface
+				/// </summary>
+				InvalidPopupParent = 3,
+				/// <summary>
+				/// The client provided an invalid surface state
+				/// </summary>
+				InvalidSurfaceState = 4,
+				/// <summary>
+				/// The client provided an invalid positioner
+				/// </summary>
+				InvalidPositioner = 5,
+			}
+		}
+		internal override void ProcessRequest(int opcode, byte[] tbuf) {
+			var _offset = 0;
+			switch(opcode) {
+				case 0: {
+					Destroy();
+					break;
+				}
+				case 1: {
+					var id_newid = Helper.ReadUint(tbuf, ref _offset);
+					var id = CreatePositioner();
+					Owner.SetObject(id_newid, id);
+					break;
+				}
+				case 2: {
+					var id_newid = Helper.ReadUint(tbuf, ref _offset);
+					var surface = Owner.GetObject<IWlSurface>(Helper.ReadUint(tbuf, ref _offset));
+					var id = GetXdgSurface(surface);
+					Owner.SetObject(id_newid, id);
+					break;
+				}
+				case 3: {
+					var serial = (uint) Helper.ReadUint(tbuf, ref _offset);
+					Pong(serial);
+					break;
+				}
+			}
+		}
+		/// <summary>
+		/// Destroy xdg_shell
+		/// </summary>
+		/// <remarks>
+		/// Destroy this xdg_shell object.
+		/// 
+		/// Destroying a bound xdg_shell object while there are surfaces
+		/// still alive created by this xdg_shell object instance is illegal
+		/// and will result in a protocol error.
+		/// </remarks>
+		public abstract void Destroy();
+		/// <summary>
+		/// Create a positioner object
+		/// </summary>
+		/// <remarks>
+		/// Create a positioner object. A positioner object is used to position
+		/// surfaces relative to some parent surface. See the interface description
+		/// and xdg_surface.get_popup for details.
+		/// </remarks>
+		public abstract IZxdgPositionerV6 CreatePositioner();
+		/// <summary>
+		/// Create a shell surface from a surface
+		/// </summary>
+		/// <remarks>
+		/// This creates an xdg_surface for the given surface. While xdg_surface
+		/// itself is not a role, the corresponding surface may only be assigned
+		/// a role extending xdg_surface, such as xdg_toplevel or xdg_popup.
+		/// 
+		/// This creates an xdg_surface for the given surface. An xdg_surface is
+		/// used as basis to define a role to a given surface, such as xdg_toplevel
+		/// or xdg_popup. It also manages functionality shared between xdg_surface
+		/// based surface roles.
+		/// 
+		/// See the documentation of xdg_surface for more details about what an
+		/// xdg_surface is and how it is used.
+		/// </remarks>
+		public abstract IZxdgSurfaceV6 GetXdgSurface(IWlSurface surface);
+		/// <summary>
+		/// Respond to a ping event
+		/// </summary>
+		/// <remarks>
+		/// A client must respond to a ping event with a pong request or
+		/// the client may be deemed unresponsive. See xdg_shell.ping.
+		/// </remarks>
+		/// <param name="serial">Serial of the ping event</param>
+		public abstract void Pong(uint serial);
+		/// <summary>
+		/// Check if the client is alive
+		/// </summary>
+		/// <remarks>
+		/// The ping event asks the client if it's still alive. Pass the
+		/// serial specified in the event back to the compositor by sending
+		/// a "pong" request back with the specified serial. See xdg_shell.ping.
+		/// 
+		/// Compositors can use this to determine if the client is still
+		/// alive. It's unspecified what will happen if the client doesn't
+		/// respond to the ping request, or in what timeframe. Clients should
+		/// try to respond in a reasonable amount of time.
+		/// 
+		/// A compositor is free to ping in any way it wants, but a client must
+		/// always respond to any xdg_shell object it created.
+		/// </remarks>
+		/// <param name="serial">Pass this to the pong request</param>
+		public void Ping(uint serial) {
+			var _offset = 0;
+			_offset += 4;
+			var tbuf = new byte[_offset];
+			_offset = 0;
+			Helper.WriteUint(tbuf, ref _offset, (uint) serial);
+			SendEvent(0, tbuf);
+		}
+	}
+	/// <summary>
+	/// Child surface positioner
+	/// </summary>
+	/// <remarks>
+	/// The xdg_positioner provides a collection of rules for the placement of a
+	/// child surface relative to a parent surface. Rules can be defined to ensure
+	/// the child surface remains within the visible area's borders, and to
+	/// specify how the child surface changes its position, such as sliding along
+	/// an axis, or flipping around a rectangle. These positioner-created rules are
+	/// constrained by the requirement that a child surface must intersect with or
+	/// be at least partially adjacent to its parent surface.
+	/// 
+	/// See the various requests for details about possible rules.
+	/// 
+	/// At the time of the request, the compositor makes a copy of the rules
+	/// specified by the xdg_positioner. Thus, after the request is complete the
+	/// xdg_positioner object can be destroyed or reused; further changes to the
+	/// object will have no effect on previous usages.
+	/// 
+	/// For an xdg_positioner object to be considered complete, it must have a
+	/// non-zero size set by set_size, and a non-zero anchor rectangle set by
+	/// set_anchor_rect. Passing an incomplete xdg_positioner object when
+	/// positioning a surface raises an error.
+	/// </remarks>
+	public abstract class IZxdgPositionerV6 : IWaylandObject {
+		public override string InterfaceName => "zxdg_positioner_v6";
+		public override int InterfaceVersion => 1;
+		protected IZxdgPositionerV6(Client owner, uint? id) : base(owner, id) {}
+		public static class Enum {
+			public enum Error {
+				/// <summary>
+				/// Invalid input provided
+				/// </summary>
+				InvalidInput = 0,
+			}
+			[Flags]
+			public enum Anchor : uint {
+				/// <summary>
+				/// The center of the anchor rectangle
+				/// </summary>
+				None = 0,
+				/// <summary>
+				/// The top edge of the anchor rectangle
+				/// </summary>
+				Top = 1,
+				/// <summary>
+				/// The bottom edge of the anchor rectangle
+				/// </summary>
+				Bottom = 2,
+				/// <summary>
+				/// The left edge of the anchor rectangle
+				/// </summary>
+				Left = 4,
+				/// <summary>
+				/// The right edge of the anchor rectangle
+				/// </summary>
+				Right = 8,
+			}
+			[Flags]
+			public enum Gravity : uint {
+				/// <summary>
+				/// Center over the anchor edge
+				/// </summary>
+				None = 0,
+				/// <summary>
+				/// Position above the anchor edge
+				/// </summary>
+				Top = 1,
+				/// <summary>
+				/// Position below the anchor edge
+				/// </summary>
+				Bottom = 2,
+				/// <summary>
+				/// Position to the left of the anchor edge
+				/// </summary>
+				Left = 4,
+				/// <summary>
+				/// Position to the right of the anchor edge
+				/// </summary>
+				Right = 8,
+			}
+			/// <summary>
+			/// Constraint adjustments
+			/// </summary>
+			/// <remarks>
+			/// The constraint adjustment value define ways the compositor will adjust
+			/// the position of the surface, if the unadjusted position would result
+			/// in the surface being partly constrained.
+			/// 
+			/// Whether a surface is considered 'constrained' is left to the compositor
+			/// to determine. For example, the surface may be partly outside the
+			/// compositor's defined 'work area', thus necessitating the child surface's
+			/// position be adjusted until it is entirely inside the work area.
+			/// 
+			/// The adjustments can be combined, according to a defined precedence: 1)
+			/// Flip, 2) Slide, 3) Resize.
+			/// </remarks>
+			[Flags]
+			public enum ConstraintAdjustment : uint {
+				/// <summary>
+				/// Don't move the child surface when constrained
+				/// </summary>
+				/// <remarks>
+				/// Don't alter the surface position even if it is constrained on some
+				/// axis, for example partially outside the edge of a monitor.
+				/// </remarks>
+				None = 0,
+				/// <summary>
+				/// Move along the x axis until unconstrained
+				/// </summary>
+				/// <remarks>
+				/// Slide the surface along the x axis until it is no longer constrained.
+				/// 
+				/// First try to slide towards the direction of the gravity on the x axis
+				/// until either the edge in the opposite direction of the gravity is
+				/// unconstrained or the edge in the direction of the gravity is
+				/// constrained.
+				/// 
+				/// Then try to slide towards the opposite direction of the gravity on the
+				/// x axis until either the edge in the direction of the gravity is
+				/// unconstrained or the edge in the opposite direction of the gravity is
+				/// constrained.
+				/// </remarks>
+				SlideX = 1,
+				/// <summary>
+				/// Move along the y axis until unconstrained
+				/// </summary>
+				/// <remarks>
+				/// Slide the surface along the y axis until it is no longer constrained.
+				/// 
+				/// First try to slide towards the direction of the gravity on the y axis
+				/// until either the edge in the opposite direction of the gravity is
+				/// unconstrained or the edge in the direction of the gravity is
+				/// constrained.
+				/// 
+				/// Then try to slide towards the opposite direction of the gravity on the
+				/// y axis until either the edge in the direction of the gravity is
+				/// unconstrained or the edge in the opposite direction of the gravity is
+				/// constrained.
+				/// </remarks>
+				SlideY = 2,
+				/// <summary>
+				/// Invert the anchor and gravity on the x axis
+				/// </summary>
+				/// <remarks>
+				/// Invert the anchor and gravity on the x axis if the surface is
+				/// constrained on the x axis. For example, if the left edge of the
+				/// surface is constrained, the gravity is 'left' and the anchor is
+				/// 'left', change the gravity to 'right' and the anchor to 'right'.
+				/// 
+				/// If the adjusted position also ends up being constrained, the resulting
+				/// position of the flip_x adjustment will be the one before the
+				/// adjustment.
+				/// </remarks>
+				FlipX = 4,
+				/// <summary>
+				/// Invert the anchor and gravity on the y axis
+				/// </summary>
+				/// <remarks>
+				/// Invert the anchor and gravity on the y axis if the surface is
+				/// constrained on the y axis. For example, if the bottom edge of the
+				/// surface is constrained, the gravity is 'bottom' and the anchor is
+				/// 'bottom', change the gravity to 'top' and the anchor to 'top'.
+				/// 
+				/// If the adjusted position also ends up being constrained, the resulting
+				/// position of the flip_y adjustment will be the one before the
+				/// adjustment.
+				/// </remarks>
+				FlipY = 8,
+				/// <summary>
+				/// Horizontally resize the surface
+				/// </summary>
+				/// <remarks>
+				/// Resize the surface horizontally so that it is completely
+				/// unconstrained.
+				/// </remarks>
+				ResizeX = 16,
+				/// <summary>
+				/// Vertically resize the surface
+				/// </summary>
+				/// <remarks>
+				/// Resize the surface vertically so that it is completely unconstrained.
+				/// </remarks>
+				ResizeY = 32,
+			}
+		}
+		internal override void ProcessRequest(int opcode, byte[] tbuf) {
+			var _offset = 0;
+			switch(opcode) {
+				case 0: {
+					Destroy();
+					break;
+				}
+				case 1: {
+					var width = (int) Helper.ReadInt(tbuf, ref _offset);
+					var height = (int) Helper.ReadInt(tbuf, ref _offset);
+					SetSize(width, height);
+					break;
+				}
+				case 2: {
+					var x = (int) Helper.ReadInt(tbuf, ref _offset);
+					var y = (int) Helper.ReadInt(tbuf, ref _offset);
+					var width = (int) Helper.ReadInt(tbuf, ref _offset);
+					var height = (int) Helper.ReadInt(tbuf, ref _offset);
+					SetAnchorRect(x, y, width, height);
+					break;
+				}
+				case 3: {
+					var anchor = (Enum.Anchor) Helper.ReadUint(tbuf, ref _offset);
+					SetAnchor(anchor);
+					break;
+				}
+				case 4: {
+					var gravity = (Enum.Gravity) Helper.ReadUint(tbuf, ref _offset);
+					SetGravity(gravity);
+					break;
+				}
+				case 5: {
+					var constraint_adjustment = (uint) Helper.ReadUint(tbuf, ref _offset);
+					SetConstraintAdjustment(constraint_adjustment);
+					break;
+				}
+				case 6: {
+					var x = (int) Helper.ReadInt(tbuf, ref _offset);
+					var y = (int) Helper.ReadInt(tbuf, ref _offset);
+					SetOffset(x, y);
+					break;
+				}
+			}
+		}
+		/// <summary>
+		/// Destroy the xdg_positioner object
+		/// </summary>
+		/// <remarks>
+		/// Notify the compositor that the xdg_positioner will no longer be used.
+		/// </remarks>
+		public abstract void Destroy();
+		/// <summary>
+		/// Set the size of the to-be positioned rectangle
+		/// </summary>
+		/// <remarks>
+		/// Set the size of the surface that is to be positioned with the positioner
+		/// object. The size is in surface-local coordinates and corresponds to the
+		/// window geometry. See xdg_surface.set_window_geometry.
+		/// 
+		/// If a zero or negative size is set the invalid_input error is raised.
+		/// </remarks>
+		/// <param name="width">Width of positioned rectangle</param>
+		/// <param name="height">Height of positioned rectangle</param>
+		public abstract void SetSize(int width, int height);
+		/// <summary>
+		/// Set the anchor rectangle within the parent surface
+		/// </summary>
+		/// <remarks>
+		/// Specify the anchor rectangle within the parent surface that the child
+		/// surface will be placed relative to. The rectangle is relative to the
+		/// window geometry as defined by xdg_surface.set_window_geometry of the
+		/// parent surface. The rectangle must be at least 1x1 large.
+		/// 
+		/// When the xdg_positioner object is used to position a child surface, the
+		/// anchor rectangle may not extend outside the window geometry of the
+		/// positioned child's parent surface.
+		/// 
+		/// If a zero or negative size is set the invalid_input error is raised.
+		/// </remarks>
+		/// <param name="x">X position of anchor rectangle</param>
+		/// <param name="y">Y position of anchor rectangle</param>
+		/// <param name="width">Width of anchor rectangle</param>
+		/// <param name="height">Height of anchor rectangle</param>
+		public abstract void SetAnchorRect(int x, int y, int width, int height);
+		/// <summary>
+		/// Set anchor rectangle anchor edges
+		/// </summary>
+		/// <remarks>
+		/// Defines a set of edges for the anchor rectangle. These are used to
+		/// derive an anchor point that the child surface will be positioned
+		/// relative to. If two orthogonal edges are specified (e.g. 'top' and
+		/// 'left'), then the anchor point will be the intersection of the edges
+		/// (e.g. the top left position of the rectangle); otherwise, the derived
+		/// anchor point will be centered on the specified edge, or in the center of
+		/// the anchor rectangle if no edge is specified.
+		/// 
+		/// If two parallel anchor edges are specified (e.g. 'left' and 'right'),
+		/// the invalid_input error is raised.
+		/// </remarks>
+		/// <param name="anchor">Bit mask of anchor edges</param>
+		public abstract void SetAnchor(Enum.Anchor anchor);
+		/// <summary>
+		/// Set child surface gravity
+		/// </summary>
+		/// <remarks>
+		/// Defines in what direction a surface should be positioned, relative to
+		/// the anchor point of the parent surface. If two orthogonal gravities are
+		/// specified (e.g. 'bottom' and 'right'), then the child surface will be
+		/// placed in the specified direction; otherwise, the child surface will be
+		/// centered over the anchor point on any axis that had no gravity
+		/// specified.
+		/// 
+		/// If two parallel gravities are specified (e.g. 'left' and 'right'), the
+		/// invalid_input error is raised.
+		/// </remarks>
+		/// <param name="gravity">Bit mask of gravity directions</param>
+		public abstract void SetGravity(Enum.Gravity gravity);
+		/// <summary>
+		/// Set the adjustment to be done when constrained
+		/// </summary>
+		/// <remarks>
+		/// Specify how the window should be positioned if the originally intended
+		/// position caused the surface to be constrained, meaning at least
+		/// partially outside positioning boundaries set by the compositor. The
+		/// adjustment is set by constructing a bitmask describing the adjustment to
+		/// be made when the surface is constrained on that axis.
+		/// 
+		/// If no bit for one axis is set, the compositor will assume that the child
+		/// surface should not change its position on that axis when constrained.
+		/// 
+		/// If more than one bit for one axis is set, the order of how adjustments
+		/// are applied is specified in the corresponding adjustment descriptions.
+		/// 
+		/// The default adjustment is none.
+		/// </remarks>
+		/// <param name="constraint_adjustment">Bit mask of constraint adjustments</param>
+		public abstract void SetConstraintAdjustment(uint constraint_adjustment);
+		/// <summary>
+		/// Set surface position offset
+		/// </summary>
+		/// <remarks>
+		/// Specify the surface position offset relative to the position of the
+		/// anchor on the anchor rectangle and the anchor on the surface. For
+		/// example if the anchor of the anchor rectangle is at (x, y), the surface
+		/// has the gravity bottom|right, and the offset is (ox, oy), the calculated
+		/// surface position will be (x + ox, y + oy). The offset position of the
+		/// surface is the one used for constraint testing. See
+		/// set_constraint_adjustment.
+		/// 
+		/// An example use case is placing a popup menu on top of a user interface
+		/// element, while aligning the user interface element of the parent surface
+		/// with some user interface element placed somewhere in the popup surface.
+		/// </remarks>
+		/// <param name="x">Surface position x offset</param>
+		/// <param name="y">Surface position y offset</param>
+		public abstract void SetOffset(int x, int y);
+	}
+	/// <summary>
+	/// Desktop user interface surface base interface
+	/// </summary>
+	/// <remarks>
+	/// An interface that may be implemented by a wl_surface, for
+	/// implementations that provide a desktop-style user interface.
+	/// 
+	/// It provides a base set of functionality required to construct user
+	/// interface elements requiring management by the compositor, such as
+	/// toplevel windows, menus, etc. The types of functionality are split into
+	/// xdg_surface roles.
+	/// 
+	/// Creating an xdg_surface does not set the role for a wl_surface. In order
+	/// to map an xdg_surface, the client must create a role-specific object
+	/// using, e.g., get_toplevel, get_popup. The wl_surface for any given
+	/// xdg_surface can have at most one role, and may not be assigned any role
+	/// not based on xdg_surface.
+	/// 
+	/// A role must be assigned before any other requests are made to the
+	/// xdg_surface object.
+	/// 
+	/// The client must call wl_surface.commit on the corresponding wl_surface
+	/// for the xdg_surface state to take effect.
+	/// 
+	/// Creating an xdg_surface from a wl_surface which has a buffer attached or
+	/// committed is a client error, and any attempts by a client to attach or
+	/// manipulate a buffer prior to the first xdg_surface.configure call must
+	/// also be treated as errors.
+	/// 
+	/// For a surface to be mapped by the compositor, the following conditions
+	/// must be met: (1) the client has assigned a xdg_surface based role to the
+	/// surface, (2) the client has set and committed the xdg_surface state and
+	/// the role dependent state to the surface and (3) the client has committed a
+	/// buffer to the surface.
+	/// </remarks>
+	public abstract class IZxdgSurfaceV6 : IWaylandObject {
+		public override string InterfaceName => "zxdg_surface_v6";
+		public override int InterfaceVersion => 1;
+		protected IZxdgSurfaceV6(Client owner, uint? id) : base(owner, id) {}
+		public static class Enum {
+			public enum Error {
+				NotConstructed = 1,
+				AlreadyConstructed = 2,
+				UnconfiguredBuffer = 3,
+			}
+		}
+		internal override void ProcessRequest(int opcode, byte[] tbuf) {
+			var _offset = 0;
+			switch(opcode) {
+				case 0: {
+					Destroy();
+					break;
+				}
+				case 1: {
+					var id_newid = Helper.ReadUint(tbuf, ref _offset);
+					var id = GetToplevel();
+					Owner.SetObject(id_newid, id);
+					break;
+				}
+				case 2: {
+					var id_newid = Helper.ReadUint(tbuf, ref _offset);
+					var parent = Owner.GetObject<IZxdgSurfaceV6>(Helper.ReadUint(tbuf, ref _offset));
+					var positioner = Owner.GetObject<IZxdgPositionerV6>(Helper.ReadUint(tbuf, ref _offset));
+					var id = GetPopup(parent, positioner);
+					Owner.SetObject(id_newid, id);
+					break;
+				}
+				case 3: {
+					var x = (int) Helper.ReadInt(tbuf, ref _offset);
+					var y = (int) Helper.ReadInt(tbuf, ref _offset);
+					var width = (int) Helper.ReadInt(tbuf, ref _offset);
+					var height = (int) Helper.ReadInt(tbuf, ref _offset);
+					SetWindowGeometry(x, y, width, height);
+					break;
+				}
+				case 4: {
+					var serial = (uint) Helper.ReadUint(tbuf, ref _offset);
+					AckConfigure(serial);
+					break;
+				}
+			}
+		}
+		/// <summary>
+		/// Destroy the xdg_surface
+		/// </summary>
+		/// <remarks>
+		/// Destroy the xdg_surface object. An xdg_surface must only be destroyed
+		/// after its role object has been destroyed.
+		/// </remarks>
+		public abstract void Destroy();
+		/// <summary>
+		/// Assign the xdg_toplevel surface role
+		/// </summary>
+		/// <remarks>
+		/// This creates an xdg_toplevel object for the given xdg_surface and gives
+		/// the associated wl_surface the xdg_toplevel role.
+		/// 
+		/// See the documentation of xdg_toplevel for more details about what an
+		/// xdg_toplevel is and how it is used.
+		/// </remarks>
+		public abstract IZxdgToplevelV6 GetToplevel();
+		/// <summary>
+		/// Assign the xdg_popup surface role
+		/// </summary>
+		/// <remarks>
+		/// This creates an xdg_popup object for the given xdg_surface and gives the
+		/// associated wl_surface the xdg_popup role.
+		/// 
+		/// See the documentation of xdg_popup for more details about what an
+		/// xdg_popup is and how it is used.
+		/// </remarks>
+		public abstract IZxdgPopupV6 GetPopup(IZxdgSurfaceV6 parent, IZxdgPositionerV6 positioner);
+		/// <summary>
+		/// Set the new window geometry
+		/// </summary>
+		/// <remarks>
+		/// The window geometry of a surface is its "visible bounds" from the
+		/// user's perspective. Client-side decorations often have invisible
+		/// portions like drop-shadows which should be ignored for the
+		/// purposes of aligning, placing and constraining windows.
+		/// 
+		/// The window geometry is double buffered, and will be applied at the
+		/// time wl_surface.commit of the corresponding wl_surface is called.
+		/// 
+		/// Once the window geometry of the surface is set, it is not possible to
+		/// unset it, and it will remain the same until set_window_geometry is
+		/// called again, even if a new subsurface or buffer is attached.
+		/// 
+		/// If never set, the value is the full bounds of the surface,
+		/// including any subsurfaces. This updates dynamically on every
+		/// commit. This unset is meant for extremely simple clients.
+		/// 
+		/// The arguments are given in the surface-local coordinate space of
+		/// the wl_surface associated with this xdg_surface.
+		/// 
+		/// The width and height must be greater than zero. Setting an invalid size
+		/// will raise an error. When applied, the effective window geometry will be
+		/// the set window geometry clamped to the bounding rectangle of the
+		/// combined geometry of the surface of the xdg_surface and the associated
+		/// subsurfaces.
+		/// </remarks>
+		public abstract void SetWindowGeometry(int x, int y, int width, int height);
+		/// <summary>
+		/// Ack a configure event
+		/// </summary>
+		/// <remarks>
+		/// When a configure event is received, if a client commits the
+		/// surface in response to the configure event, then the client
+		/// must make an ack_configure request sometime before the commit
+		/// request, passing along the serial of the configure event.
+		/// 
+		/// For instance, for toplevel surfaces the compositor might use this
+		/// information to move a surface to the top left only when the client has
+		/// drawn itself for the maximized or fullscreen state.
+		/// 
+		/// If the client receives multiple configure events before it
+		/// can respond to one, it only has to ack the last configure event.
+		/// 
+		/// A client is not required to commit immediately after sending
+		/// an ack_configure request - it may even ack_configure several times
+		/// before its next surface commit.
+		/// 
+		/// A client may send multiple ack_configure requests before committing, but
+		/// only the last request sent before a commit indicates which configure
+		/// event the client really is responding to.
+		/// </remarks>
+		/// <param name="serial">The serial from the configure event</param>
+		public abstract void AckConfigure(uint serial);
+		/// <summary>
+		/// Suggest a surface change
+		/// </summary>
+		/// <remarks>
+		/// The configure event marks the end of a configure sequence. A configure
+		/// sequence is a set of one or more events configuring the state of the
+		/// xdg_surface, including the final xdg_surface.configure event.
+		/// 
+		/// Where applicable, xdg_surface surface roles will during a configure
+		/// sequence extend this event as a latched state sent as events before the
+		/// xdg_surface.configure event. Such events should be considered to make up
+		/// a set of atomically applied configuration states, where the
+		/// xdg_surface.configure commits the accumulated state.
+		/// 
+		/// Clients should arrange their surface for the new states, and then send
+		/// an ack_configure request with the serial sent in this configure event at
+		/// some point before committing the new surface.
+		/// 
+		/// If the client receives multiple configure events before it can respond
+		/// to one, it is free to discard all but the last event it received.
+		/// </remarks>
+		/// <param name="serial">Serial of the configure event</param>
+		public void Configure(uint serial) {
+			var _offset = 0;
+			_offset += 4;
+			var tbuf = new byte[_offset];
+			_offset = 0;
+			Helper.WriteUint(tbuf, ref _offset, (uint) serial);
+			SendEvent(0, tbuf);
+		}
+	}
+	/// <summary>
+	/// Toplevel surface
+	/// </summary>
+	/// <remarks>
+	/// This interface defines an xdg_surface role which allows a surface to,
+	/// among other things, set window-like properties such as maximize,
+	/// fullscreen, and minimize, set application-specific metadata like title and
+	/// id, and well as trigger user interactive operations such as interactive
+	/// resize and move.
+	/// </remarks>
+	public abstract class IZxdgToplevelV6 : IWaylandObject {
+		public override string InterfaceName => "zxdg_toplevel_v6";
+		public override int InterfaceVersion => 1;
+		protected IZxdgToplevelV6(Client owner, uint? id) : base(owner, id) {}
+		public static class Enum {
+			/// <summary>
+			/// Edge values for resizing
+			/// </summary>
+			/// <remarks>
+			/// These values are used to indicate which edge of a surface
+			/// is being dragged in a resize operation.
+			/// </remarks>
+			public enum ResizeEdge {
+				None = 0,
+				Top = 1,
+				Bottom = 2,
+				Left = 4,
+				TopLeft = 5,
+				BottomLeft = 6,
+				Right = 8,
+				TopRight = 9,
+				BottomRight = 10,
+			}
+			/// <summary>
+			/// Types of state on the surface
+			/// </summary>
+			/// <remarks>
+			/// The different state values used on the surface. This is designed for
+			/// state values like maximized, fullscreen. It is paired with the
+			/// configure event to ensure that both the client and the compositor
+			/// setting the state can be synchronized.
+			/// 
+			/// States set in this way are double-buffered. They will get applied on
+			/// the next commit.
+			/// </remarks>
+			public enum State {
+				/// <summary>
+				/// The surface is maximized
+				/// </summary>
+				/// <remarks>
+				/// The surface is maximized. The window geometry specified in the configure
+				/// event must be obeyed by the client.
+				/// </remarks>
+				Maximized = 1,
+				/// <summary>
+				/// The surface is fullscreen
+				/// </summary>
+				/// <remarks>
+				/// The surface is fullscreen. The window geometry specified in the configure
+				/// event must be obeyed by the client.
+				/// </remarks>
+				Fullscreen = 2,
+				/// <summary>
+				/// The surface is being resized
+				/// </summary>
+				/// <remarks>
+				/// The surface is being resized. The window geometry specified in the
+				/// configure event is a maximum; the client cannot resize beyond it.
+				/// Clients that have aspect ratio or cell sizing configuration can use
+				/// a smaller size, however.
+				/// </remarks>
+				Resizing = 3,
+				/// <summary>
+				/// The surface is now activated
+				/// </summary>
+				/// <remarks>
+				/// Client window decorations should be painted as if the window is
+				/// active. Do not assume this means that the window actually has
+				/// keyboard or pointer focus.
+				/// </remarks>
+				Activated = 4,
+			}
+		}
+		internal override void ProcessRequest(int opcode, byte[] tbuf) {
+			var _offset = 0;
+			switch(opcode) {
+				case 0: {
+					Destroy();
+					break;
+				}
+				case 1: {
+					var parent = Owner.GetObject<IZxdgToplevelV6>(Helper.ReadUint(tbuf, ref _offset));
+					SetParent(parent);
+					break;
+				}
+				case 2: {
+					var title = Helper.ReadString(tbuf, ref _offset);
+					SetTitle(title);
+					break;
+				}
+				case 3: {
+					var app_id = Helper.ReadString(tbuf, ref _offset);
+					SetAppId(app_id);
+					break;
+				}
+				case 4: {
+					var seat = Owner.GetObject<IWlSeat>(Helper.ReadUint(tbuf, ref _offset));
+					var serial = (uint) Helper.ReadUint(tbuf, ref _offset);
+					var x = (int) Helper.ReadInt(tbuf, ref _offset);
+					var y = (int) Helper.ReadInt(tbuf, ref _offset);
+					ShowWindowMenu(seat, serial, x, y);
+					break;
+				}
+				case 5: {
+					var seat = Owner.GetObject<IWlSeat>(Helper.ReadUint(tbuf, ref _offset));
+					var serial = (uint) Helper.ReadUint(tbuf, ref _offset);
+					Move(seat, serial);
+					break;
+				}
+				case 6: {
+					var seat = Owner.GetObject<IWlSeat>(Helper.ReadUint(tbuf, ref _offset));
+					var serial = (uint) Helper.ReadUint(tbuf, ref _offset);
+					var edges = (uint) Helper.ReadUint(tbuf, ref _offset);
+					Resize(seat, serial, edges);
+					break;
+				}
+				case 7: {
+					var width = (int) Helper.ReadInt(tbuf, ref _offset);
+					var height = (int) Helper.ReadInt(tbuf, ref _offset);
+					SetMaxSize(width, height);
+					break;
+				}
+				case 8: {
+					var width = (int) Helper.ReadInt(tbuf, ref _offset);
+					var height = (int) Helper.ReadInt(tbuf, ref _offset);
+					SetMinSize(width, height);
+					break;
+				}
+				case 9: {
+					SetMaximized();
+					break;
+				}
+				case 10: {
+					UnsetMaximized();
+					break;
+				}
+				case 11: {
+					var output = Owner.GetObject<IWlOutput>(Helper.ReadUint(tbuf, ref _offset));
+					SetFullscreen(output);
+					break;
+				}
+				case 12: {
+					UnsetFullscreen();
+					break;
+				}
+				case 13: {
+					SetMinimized();
+					break;
+				}
+			}
+		}
+		/// <summary>
+		/// Destroy the xdg_toplevel
+		/// </summary>
+		/// <remarks>
+		/// Unmap and destroy the window. The window will be effectively
+		/// hidden from the user's point of view, and all state like
+		/// maximization, fullscreen, and so on, will be lost.
+		/// </remarks>
+		public abstract void Destroy();
+		/// <summary>
+		/// Set the parent of this surface
+		/// </summary>
+		/// <remarks>
+		/// Set the "parent" of this surface. This window should be stacked
+		/// above a parent. The parent surface must be mapped as long as this
+		/// surface is mapped.
+		/// 
+		/// Parent windows should be set on dialogs, toolboxes, or other
+		/// "auxiliary" surfaces, so that the parent is raised when the dialog
+		/// is raised.
+		/// </remarks>
+		public abstract void SetParent(IZxdgToplevelV6 parent);
+		/// <summary>
+		/// Set surface title
+		/// </summary>
+		/// <remarks>
+		/// Set a short title for the surface.
+		/// 
+		/// This string may be used to identify the surface in a task bar,
+		/// window list, or other user interface elements provided by the
+		/// compositor.
+		/// 
+		/// The string must be encoded in UTF-8.
+		/// </remarks>
+		public abstract void SetTitle(string title);
+		/// <summary>
+		/// Set application ID
+		/// </summary>
+		/// <remarks>
+		/// Set an application identifier for the surface.
+		/// 
+		/// The app ID identifies the general class of applications to which
+		/// the surface belongs. The compositor can use this to group multiple
+		/// surfaces together, or to determine how to launch a new application.
+		/// 
+		/// For D-Bus activatable applications, the app ID is used as the D-Bus
+		/// service name.
+		/// 
+		/// The compositor shell will try to group application surfaces together
+		/// by their app ID. As a best practice, it is suggested to select app
+		/// ID's that match the basename of the application's .desktop file.
+		/// For example, "org.freedesktop.FooViewer" where the .desktop file is
+		/// "org.freedesktop.FooViewer.desktop".
+		/// 
+		/// See the desktop-entry specification [0] for more details on
+		/// application identifiers and how they relate to well-known D-Bus
+		/// names and .desktop files.
+		/// 
+		/// [0] http://standards.freedesktop.org/desktop-entry-spec/
+		/// </remarks>
+		public abstract void SetAppId(string app_id);
+		/// <summary>
+		/// Show the window menu
+		/// </summary>
+		/// <remarks>
+		/// Clients implementing client-side decorations might want to show
+		/// a context menu when right-clicking on the decorations, giving the
+		/// user a menu that they can use to maximize or minimize the window.
+		/// 
+		/// This request asks the compositor to pop up such a window menu at
+		/// the given position, relative to the local surface coordinates of
+		/// the parent surface. There are no guarantees as to what menu items
+		/// the window menu contains.
+		/// 
+		/// This request must be used in response to some sort of user action
+		/// like a button press, key press, or touch down event.
+		/// </remarks>
+		/// <param name="seat">The wl_seat of the user event</param>
+		/// <param name="serial">The serial of the user event</param>
+		/// <param name="x">The x position to pop up the window menu at</param>
+		/// <param name="y">The y position to pop up the window menu at</param>
+		public abstract void ShowWindowMenu(IWlSeat seat, uint serial, int x, int y);
+		/// <summary>
+		/// Start an interactive move
+		/// </summary>
+		/// <remarks>
+		/// Start an interactive, user-driven move of the surface.
+		/// 
+		/// This request must be used in response to some sort of user action
+		/// like a button press, key press, or touch down event. The passed
+		/// serial is used to determine the type of interactive move (touch,
+		/// pointer, etc).
+		/// 
+		/// The server may ignore move requests depending on the state of
+		/// the surface (e.g. fullscreen or maximized), or if the passed serial
+		/// is no longer valid.
+		/// 
+		/// If triggered, the surface will lose the focus of the device
+		/// (wl_pointer, wl_touch, etc) used for the move. It is up to the
+		/// compositor to visually indicate that the move is taking place, such as
+		/// updating a pointer cursor, during the move. There is no guarantee
+		/// that the device focus will return when the move is completed.
+		/// </remarks>
+		/// <param name="seat">The wl_seat of the user event</param>
+		/// <param name="serial">The serial of the user event</param>
+		public abstract void Move(IWlSeat seat, uint serial);
+		/// <summary>
+		/// Start an interactive resize
+		/// </summary>
+		/// <remarks>
+		/// Start a user-driven, interactive resize of the surface.
+		/// 
+		/// This request must be used in response to some sort of user action
+		/// like a button press, key press, or touch down event. The passed
+		/// serial is used to determine the type of interactive resize (touch,
+		/// pointer, etc).
+		/// 
+		/// The server may ignore resize requests depending on the state of
+		/// the surface (e.g. fullscreen or maximized).
+		/// 
+		/// If triggered, the client will receive configure events with the
+		/// "resize" state enum value and the expected sizes. See the "resize"
+		/// enum value for more details about what is required. The client
+		/// must also acknowledge configure events using "ack_configure". After
+		/// the resize is completed, the client will receive another "configure"
+		/// event without the resize state.
+		/// 
+		/// If triggered, the surface also will lose the focus of the device
+		/// (wl_pointer, wl_touch, etc) used for the resize. It is up to the
+		/// compositor to visually indicate that the resize is taking place,
+		/// such as updating a pointer cursor, during the resize. There is no
+		/// guarantee that the device focus will return when the resize is
+		/// completed.
+		/// 
+		/// The edges parameter specifies how the surface should be resized,
+		/// and is one of the values of the resize_edge enum. The compositor
+		/// may use this information to update the surface position for
+		/// example when dragging the top left corner. The compositor may also
+		/// use this information to adapt its behavior, e.g. choose an
+		/// appropriate cursor image.
+		/// </remarks>
+		/// <param name="seat">The wl_seat of the user event</param>
+		/// <param name="serial">The serial of the user event</param>
+		/// <param name="edges">Which edge or corner is being dragged</param>
+		public abstract void Resize(IWlSeat seat, uint serial, uint edges);
+		/// <summary>
+		/// Set the maximum size
+		/// </summary>
+		/// <remarks>
+		/// Set a maximum size for the window.
+		/// 
+		/// The client can specify a maximum size so that the compositor does
+		/// not try to configure the window beyond this size.
+		/// 
+		/// The width and height arguments are in window geometry coordinates.
+		/// See xdg_surface.set_window_geometry.
+		/// 
+		/// Values set in this way are double-buffered. They will get applied
+		/// on the next commit.
+		/// 
+		/// The compositor can use this information to allow or disallow
+		/// different states like maximize or fullscreen and draw accurate
+		/// animations.
+		/// 
+		/// Similarly, a tiling window manager may use this information to
+		/// place and resize client windows in a more effective way.
+		/// 
+		/// The client should not rely on the compositor to obey the maximum
+		/// size. The compositor may decide to ignore the values set by the
+		/// client and request a larger size.
+		/// 
+		/// If never set, or a value of zero in the request, means that the
+		/// client has no expected maximum size in the given dimension.
+		/// As a result, a client wishing to reset the maximum size
+		/// to an unspecified state can use zero for width and height in the
+		/// request.
+		/// 
+		/// Requesting a maximum size to be smaller than the minimum size of
+		/// a surface is illegal and will result in a protocol error.
+		/// 
+		/// The width and height must be greater than or equal to zero. Using
+		/// strictly negative values for width and height will result in a
+		/// protocol error.
+		/// </remarks>
+		public abstract void SetMaxSize(int width, int height);
+		/// <summary>
+		/// Set the minimum size
+		/// </summary>
+		/// <remarks>
+		/// Set a minimum size for the window.
+		/// 
+		/// The client can specify a minimum size so that the compositor does
+		/// not try to configure the window below this size.
+		/// 
+		/// The width and height arguments are in window geometry coordinates.
+		/// See xdg_surface.set_window_geometry.
+		/// 
+		/// Values set in this way are double-buffered. They will get applied
+		/// on the next commit.
+		/// 
+		/// The compositor can use this information to allow or disallow
+		/// different states like maximize or fullscreen and draw accurate
+		/// animations.
+		/// 
+		/// Similarly, a tiling window manager may use this information to
+		/// place and resize client windows in a more effective way.
+		/// 
+		/// The client should not rely on the compositor to obey the minimum
+		/// size. The compositor may decide to ignore the values set by the
+		/// client and request a smaller size.
+		/// 
+		/// If never set, or a value of zero in the request, means that the
+		/// client has no expected minimum size in the given dimension.
+		/// As a result, a client wishing to reset the minimum size
+		/// to an unspecified state can use zero for width and height in the
+		/// request.
+		/// 
+		/// Requesting a minimum size to be larger than the maximum size of
+		/// a surface is illegal and will result in a protocol error.
+		/// 
+		/// The width and height must be greater than or equal to zero. Using
+		/// strictly negative values for width and height will result in a
+		/// protocol error.
+		/// </remarks>
+		public abstract void SetMinSize(int width, int height);
+		/// <summary>
+		/// Maximize the window
+		/// </summary>
+		/// <remarks>
+		/// Maximize the surface.
+		/// 
+		/// After requesting that the surface should be maximized, the compositor
+		/// will respond by emitting a configure event with the "maximized" state
+		/// and the required window geometry. The client should then update its
+		/// content, drawing it in a maximized state, i.e. without shadow or other
+		/// decoration outside of the window geometry. The client must also
+		/// acknowledge the configure when committing the new content (see
+		/// ack_configure).
+		/// 
+		/// It is up to the compositor to decide how and where to maximize the
+		/// surface, for example which output and what region of the screen should
+		/// be used.
+		/// 
+		/// If the surface was already maximized, the compositor will still emit
+		/// a configure event with the "maximized" state.
+		/// </remarks>
+		public abstract void SetMaximized();
+		/// <summary>
+		/// Unmaximize the window
+		/// </summary>
+		/// <remarks>
+		/// Unmaximize the surface.
+		/// 
+		/// After requesting that the surface should be unmaximized, the compositor
+		/// will respond by emitting a configure event without the "maximized"
+		/// state. If available, the compositor will include the window geometry
+		/// dimensions the window had prior to being maximized in the configure
+		/// request. The client must then update its content, drawing it in a
+		/// regular state, i.e. potentially with shadow, etc. The client must also
+		/// acknowledge the configure when committing the new content (see
+		/// ack_configure).
+		/// 
+		/// It is up to the compositor to position the surface after it was
+		/// unmaximized; usually the position the surface had before maximizing, if
+		/// applicable.
+		/// 
+		/// If the surface was already not maximized, the compositor will still
+		/// emit a configure event without the "maximized" state.
+		/// </remarks>
+		public abstract void UnsetMaximized();
+		/// <summary>
+		/// Set the window as fullscreen on a monitor
+		/// </summary>
+		/// <remarks>
+		/// Make the surface fullscreen.
+		/// 
+		/// You can specify an output that you would prefer to be fullscreen.
+		/// If this value is NULL, it's up to the compositor to choose which
+		/// display will be used to map this surface.
+		/// 
+		/// If the surface doesn't cover the whole output, the compositor will
+		/// position the surface in the center of the output and compensate with
+		/// black borders filling the rest of the output.
+		/// </remarks>
+		public abstract void SetFullscreen(IWlOutput output);
+		public abstract void UnsetFullscreen();
+		/// <summary>
+		/// Set the window as minimized
+		/// </summary>
+		/// <remarks>
+		/// Request that the compositor minimize your surface. There is no
+		/// way to know if the surface is currently minimized, nor is there
+		/// any way to unset minimization on this surface.
+		/// 
+		/// If you are looking to throttle redrawing when minimized, please
+		/// instead use the wl_surface.frame event for this, as this will
+		/// also work with live previews on windows in Alt-Tab, Expose or
+		/// similar compositor features.
+		/// </remarks>
+		public abstract void SetMinimized();
+		/// <summary>
+		/// Suggest a surface change
+		/// </summary>
+		/// <remarks>
+		/// This configure event asks the client to resize its toplevel surface or
+		/// to change its state. The configured state should not be applied
+		/// immediately. See xdg_surface.configure for details.
+		/// 
+		/// The width and height arguments specify a hint to the window
+		/// about how its surface should be resized in window geometry
+		/// coordinates. See set_window_geometry.
+		/// 
+		/// If the width or height arguments are zero, it means the client
+		/// should decide its own window dimension. This may happen when the
+		/// compositor needs to configure the state of the surface but doesn't
+		/// have any information about any previous or expected dimension.
+		/// 
+		/// The states listed in the event specify how the width/height
+		/// arguments should be interpreted, and possibly how it should be
+		/// drawn.
+		/// 
+		/// Clients must send an ack_configure in response to this event. See
+		/// xdg_surface.configure and xdg_surface.ack_configure for details.
+		/// </remarks>
+		public void Configure(int width, int height, byte[] states) {
+			var _offset = 0;
+			_offset += 4;
+			_offset += 4;
+			_offset += Helper.ArraySize(states);
+			var tbuf = new byte[_offset];
+			_offset = 0;
+			Helper.WriteInt(tbuf, ref _offset, (int) width);
+			Helper.WriteInt(tbuf, ref _offset, (int) height);
+			Helper.WriteArray(tbuf, ref _offset, states);
+			SendEvent(0, tbuf);
+		}
+		/// <summary>
+		/// Surface wants to be closed
+		/// </summary>
+		/// <remarks>
+		/// The close event is sent by the compositor when the user
+		/// wants the surface to be closed. This should be equivalent to
+		/// the user clicking the close button in client-side decorations,
+		/// if your application has any.
+		/// 
+		/// This is only a request that the user intends to close the
+		/// window. The client may choose to ignore this request, or show
+		/// a dialog to ask the user to save their data, etc.
+		/// </remarks>
+		public void Close() {
+			var _offset = 0;
+			var tbuf = new byte[_offset];
+			_offset = 0;
+			SendEvent(1, tbuf);
+		}
+	}
+	/// <summary>
+	/// Short-lived, popup surfaces for menus
+	/// </summary>
+	/// <remarks>
+	/// A popup surface is a short-lived, temporary surface. It can be used to
+	/// implement for example menus, popovers, tooltips and other similar user
+	/// interface concepts.
+	/// 
+	/// A popup can be made to take an explicit grab. See xdg_popup.grab for
+	/// details.
+	/// 
+	/// When the popup is dismissed, a popup_done event will be sent out, and at
+	/// the same time the surface will be unmapped. See the xdg_popup.popup_done
+	/// event for details.
+	/// 
+	/// Explicitly destroying the xdg_popup object will also dismiss the popup and
+	/// unmap the surface. Clients that want to dismiss the popup when another
+	/// surface of their own is clicked should dismiss the popup using the destroy
+	/// request.
+	/// 
+	/// The parent surface must have either the xdg_toplevel or xdg_popup surface
+	/// role.
+	/// 
+	/// A newly created xdg_popup will be stacked on top of all previously created
+	/// xdg_popup surfaces associated with the same xdg_toplevel.
+	/// 
+	/// The parent of an xdg_popup must be mapped (see the xdg_surface
+	/// description) before the xdg_popup itself.
+	/// 
+	/// The x and y arguments passed when creating the popup object specify
+	/// where the top left of the popup should be placed, relative to the
+	/// local surface coordinates of the parent surface. See
+	/// xdg_surface.get_popup. An xdg_popup must intersect with or be at least
+	/// partially adjacent to its parent surface.
+	/// 
+	/// The client must call wl_surface.commit on the corresponding wl_surface
+	/// for the xdg_popup state to take effect.
+	/// </remarks>
+	public abstract class IZxdgPopupV6 : IWaylandObject {
+		public override string InterfaceName => "zxdg_popup_v6";
+		public override int InterfaceVersion => 1;
+		protected IZxdgPopupV6(Client owner, uint? id) : base(owner, id) {}
+		public static class Enum {
+			public enum Error {
+				/// <summary>
+				/// Tried to grab after being mapped
+				/// </summary>
+				InvalidGrab = 0,
+			}
+		}
+		internal override void ProcessRequest(int opcode, byte[] tbuf) {
+			var _offset = 0;
+			switch(opcode) {
+				case 0: {
+					Destroy();
+					break;
+				}
+				case 1: {
+					var seat = Owner.GetObject<IWlSeat>(Helper.ReadUint(tbuf, ref _offset));
+					var serial = (uint) Helper.ReadUint(tbuf, ref _offset);
+					Grab(seat, serial);
+					break;
+				}
+			}
+		}
+		/// <summary>
+		/// Remove xdg_popup interface
+		/// </summary>
+		/// <remarks>
+		/// This destroys the popup. Explicitly destroying the xdg_popup
+		/// object will also dismiss the popup, and unmap the surface.
+		/// 
+		/// If this xdg_popup is not the "topmost" popup, a protocol error
+		/// will be sent.
+		/// </remarks>
+		public abstract void Destroy();
+		/// <summary>
+		/// Make the popup take an explicit grab
+		/// </summary>
+		/// <remarks>
+		/// This request makes the created popup take an explicit grab. An explicit
+		/// grab will be dismissed when the user dismisses the popup, or when the
+		/// client destroys the xdg_popup. This can be done by the user clicking
+		/// outside the surface, using the keyboard, or even locking the screen
+		/// through closing the lid or a timeout.
+		/// 
+		/// If the compositor denies the grab, the popup will be immediately
+		/// dismissed.
+		/// 
+		/// This request must be used in response to some sort of user action like a
+		/// button press, key press, or touch down event. The serial number of the
+		/// event should be passed as 'serial'.
+		/// 
+		/// The parent of a grabbing popup must either be an xdg_toplevel surface or
+		/// another xdg_popup with an explicit grab. If the parent is another
+		/// xdg_popup it means that the popups are nested, with this popup now being
+		/// the topmost popup.
+		/// 
+		/// Nested popups must be destroyed in the reverse order they were created
+		/// in, e.g. the only popup you are allowed to destroy at all times is the
+		/// topmost one.
+		/// 
+		/// When compositors choose to dismiss a popup, they may dismiss every
+		/// nested grabbing popup as well. When a compositor dismisses popups, it
+		/// will follow the same dismissing order as required from the client.
+		/// 
+		/// The parent of a grabbing popup must either be another xdg_popup with an
+		/// active explicit grab, or an xdg_popup or xdg_toplevel, if there are no
+		/// explicit grabs already taken.
+		/// 
+		/// If the topmost grabbing popup is destroyed, the grab will be returned to
+		/// the parent of the popup, if that parent previously had an explicit grab.
+		/// 
+		/// If the parent is a grabbing popup which has already been dismissed, this
+		/// popup will be immediately dismissed. If the parent is a popup that did
+		/// not take an explicit grab, an error will be raised.
+		/// 
+		/// During a popup grab, the client owning the grab will receive pointer
+		/// and touch events for all their surfaces as normal (similar to an
+		/// "owner-events" grab in X11 parlance), while the top most grabbing popup
+		/// will always have keyboard focus.
+		/// </remarks>
+		/// <param name="seat">The wl_seat of the user event</param>
+		/// <param name="serial">The serial of the user event</param>
+		public abstract void Grab(IWlSeat seat, uint serial);
+		/// <summary>
+		/// Configure the popup surface
+		/// </summary>
+		/// <remarks>
+		/// This event asks the popup surface to configure itself given the
+		/// configuration. The configured state should not be applied immediately.
+		/// See xdg_surface.configure for details.
+		/// 
+		/// The x and y arguments represent the position the popup was placed at
+		/// given the xdg_positioner rule, relative to the upper left corner of the
+		/// window geometry of the parent surface.
+		/// </remarks>
+		/// <param name="x">X position relative to parent surface window geometry</param>
+		/// <param name="y">Y position relative to parent surface window geometry</param>
+		/// <param name="width">Window geometry width</param>
+		/// <param name="height">Window geometry height</param>
+		public void Configure(int x, int y, int width, int height) {
+			var _offset = 0;
+			_offset += 4;
+			_offset += 4;
+			_offset += 4;
+			_offset += 4;
+			var tbuf = new byte[_offset];
+			_offset = 0;
+			Helper.WriteInt(tbuf, ref _offset, (int) x);
+			Helper.WriteInt(tbuf, ref _offset, (int) y);
+			Helper.WriteInt(tbuf, ref _offset, (int) width);
+			Helper.WriteInt(tbuf, ref _offset, (int) height);
+			SendEvent(0, tbuf);
+		}
+		/// <summary>
+		/// Popup interaction is done
+		/// </summary>
+		/// <remarks>
+		/// The popup_done event is sent out when a popup is dismissed by the
+		/// compositor. The client should destroy the xdg_popup object at this
+		/// point.
+		/// </remarks>
+		public void PopupDone() {
+			var _offset = 0;
+			var tbuf = new byte[_offset];
+			_offset = 0;
+			SendEvent(1, tbuf);
+		}
+	}
+	/// <summary>
 	/// Core global object
 	/// </summary>
 	/// <remarks>
@@ -42,21 +1411,18 @@ namespace WaylandSharp.Generated {
 				Implementation = 3,
 			}
 		}
-		internal override void ProcessRequest(int opcode, int mlen) {
-			var tbuf = new byte[mlen];
+		internal override void ProcessRequest(int opcode, byte[] tbuf) {
 			var _offset = 0;
 			switch(opcode) {
 				case 0: {
-					Owner.Socket.Read(tbuf);
 					var callback_newid = Helper.ReadUint(tbuf, ref _offset);
-					Sync(out var callback);
+					var callback = Sync();
 					Owner.SetObject(callback_newid, callback);
 					break;
 				}
 				case 1: {
-					Owner.Socket.Read(tbuf);
 					var registry_newid = Helper.ReadUint(tbuf, ref _offset);
-					GetRegistry(out var registry);
+					var registry = GetRegistry();
 					Owner.SetObject(registry_newid, registry);
 					break;
 				}
@@ -79,7 +1445,7 @@ namespace WaylandSharp.Generated {
 		/// The callback_data passed in the callback is the event serial.
 		/// </remarks>
 		/// <param name="callback">Callback object for the sync request</param>
-		public abstract void Sync(out IWlCallback callback);
+		public abstract IWlCallback Sync();
 		/// <summary>
 		/// Get global registry object
 		/// </summary>
@@ -95,7 +1461,7 @@ namespace WaylandSharp.Generated {
 		/// possible to avoid wasting memory.
 		/// </remarks>
 		/// <param name="registry">Global registry object</param>
-		public abstract void GetRegistry(out IWlRegistry registry);
+		public abstract IWlRegistry GetRegistry();
 		/// <summary>
 		/// Fatal error event
 		/// </summary>
@@ -172,17 +1538,15 @@ namespace WaylandSharp.Generated {
 		public override string InterfaceName => "wl_registry";
 		public override int InterfaceVersion => 1;
 		protected IWlRegistry(Client owner, uint? id) : base(owner, id) {}
-		internal override void ProcessRequest(int opcode, int mlen) {
-			var tbuf = new byte[mlen];
+		internal override void ProcessRequest(int opcode, byte[] tbuf) {
 			var _offset = 0;
 			switch(opcode) {
 				case 0: {
-					Owner.Socket.Read(tbuf);
 					var name = (uint) Helper.ReadUint(tbuf, ref _offset);
 					var id_iname = Helper.ReadString(tbuf, ref _offset);
 					var id_version = Helper.ReadUint(tbuf, ref _offset);
 					var id_newid = Helper.ReadUint(tbuf, ref _offset);
-					Bind(name, out var id);
+					var id = Bind(name);
 					Owner.SetObject(id_newid, id);
 					break;
 				}
@@ -197,7 +1561,7 @@ namespace WaylandSharp.Generated {
 		/// </remarks>
 		/// <param name="name">Unique numeric name of the object</param>
 		/// <param name="id">Bounded object</param>
-		public abstract void Bind(uint name, out IWaylandObject id);
+		public abstract IWaylandObject Bind(uint name);
 		/// <summary>
 		/// Announce global object
 		/// </summary>
@@ -259,7 +1623,7 @@ namespace WaylandSharp.Generated {
 		public override string InterfaceName => "wl_callback";
 		public override int InterfaceVersion => 1;
 		protected IWlCallback(Client owner, uint? id) : base(owner, id) {}
-		internal override void ProcessRequest(int opcode, int mlen) {
+		internal override void ProcessRequest(int opcode, byte[] tbuf) {
 			throw new NotSupportedException();
 		}
 		/// <summary>
@@ -290,21 +1654,18 @@ namespace WaylandSharp.Generated {
 		public override string InterfaceName => "wl_compositor";
 		public override int InterfaceVersion => 4;
 		protected IWlCompositor(Client owner, uint? id) : base(owner, id) {}
-		internal override void ProcessRequest(int opcode, int mlen) {
-			var tbuf = new byte[mlen];
+		internal override void ProcessRequest(int opcode, byte[] tbuf) {
 			var _offset = 0;
 			switch(opcode) {
 				case 0: {
-					Owner.Socket.Read(tbuf);
 					var id_newid = Helper.ReadUint(tbuf, ref _offset);
-					CreateSurface(out var id);
+					var id = CreateSurface();
 					Owner.SetObject(id_newid, id);
 					break;
 				}
 				case 1: {
-					Owner.Socket.Read(tbuf);
 					var id_newid = Helper.ReadUint(tbuf, ref _offset);
-					CreateRegion(out var id);
+					var id = CreateRegion();
 					Owner.SetObject(id_newid, id);
 					break;
 				}
@@ -317,7 +1678,7 @@ namespace WaylandSharp.Generated {
 		/// Ask the compositor to create a new surface.
 		/// </remarks>
 		/// <param name="id">The new surface</param>
-		public abstract void CreateSurface(out IWlSurface id);
+		public abstract IWlSurface CreateSurface();
 		/// <summary>
 		/// Create new region
 		/// </summary>
@@ -325,7 +1686,7 @@ namespace WaylandSharp.Generated {
 		/// Ask the compositor to create a new region.
 		/// </remarks>
 		/// <param name="id">The new region</param>
-		public abstract void CreateRegion(out IWlRegion id);
+		public abstract IWlRegion CreateRegion();
 	}
 	/// <summary>
 	/// A shared memory pool
@@ -343,29 +1704,25 @@ namespace WaylandSharp.Generated {
 		public override string InterfaceName => "wl_shm_pool";
 		public override int InterfaceVersion => 1;
 		protected IWlShmPool(Client owner, uint? id) : base(owner, id) {}
-		internal override void ProcessRequest(int opcode, int mlen) {
-			var tbuf = new byte[mlen];
+		internal override void ProcessRequest(int opcode, byte[] tbuf) {
 			var _offset = 0;
 			switch(opcode) {
 				case 0: {
-					Owner.Socket.Read(tbuf);
 					var id_newid = Helper.ReadUint(tbuf, ref _offset);
 					var offset = (int) Helper.ReadInt(tbuf, ref _offset);
 					var width = (int) Helper.ReadInt(tbuf, ref _offset);
 					var height = (int) Helper.ReadInt(tbuf, ref _offset);
 					var stride = (int) Helper.ReadInt(tbuf, ref _offset);
 					var format = (IWlShm.Enum.Format) Helper.ReadUint(tbuf, ref _offset);
-					CreateBuffer(out var id, offset, width, height, stride, format);
+					var id = CreateBuffer(offset, width, height, stride, format);
 					Owner.SetObject(id_newid, id);
 					break;
 				}
 				case 1: {
-					Owner.Socket.Read(tbuf);
 					Destroy();
 					break;
 				}
 				case 2: {
-					Owner.Socket.Read(tbuf);
 					var size = (int) Helper.ReadInt(tbuf, ref _offset);
 					Resize(size);
 					break;
@@ -394,7 +1751,7 @@ namespace WaylandSharp.Generated {
 		/// <param name="height">Buffer height, in pixels</param>
 		/// <param name="stride">Number of bytes from the beginning of one row to the beginning of the next row</param>
 		/// <param name="format">Buffer pixel format</param>
-		public abstract void CreateBuffer(out IWlBuffer id, int offset, int width, int height, int stride, IWlShm.Enum.Format format);
+		public abstract IWlBuffer CreateBuffer(int offset, int width, int height, int stride, IWlShm.Enum.Format format);
 		/// <summary>
 		/// Destroy the pool
 		/// </summary>
@@ -844,15 +2201,13 @@ namespace WaylandSharp.Generated {
 				P016 = 0x36313050,
 			}
 		}
-		internal override void ProcessRequest(int opcode, int mlen) {
-			var tbuf = new byte[mlen];
+		internal override void ProcessRequest(int opcode, byte[] tbuf) {
 			var _offset = 0;
 			switch(opcode) {
 				case 0: {
-					var fd = (IntPtr) Owner.Socket.ReadWithFd(tbuf);
 					var id_newid = Helper.ReadUint(tbuf, ref _offset);
 					var size = (int) Helper.ReadInt(tbuf, ref _offset);
-					CreatePool(out var id, fd, size);
+					var id = CreatePool(Owner.GetNextFd(), size);
 					Owner.SetObject(id_newid, id);
 					break;
 				}
@@ -871,7 +2226,7 @@ namespace WaylandSharp.Generated {
 		/// <param name="id">Pool to create</param>
 		/// <param name="fd">File descriptor for the pool</param>
 		/// <param name="size">Pool size, in bytes</param>
-		public abstract void CreatePool(out IWlShmPool id, IntPtr fd, int size);
+		public abstract IWlShmPool CreatePool(int fd, int size);
 		/// <summary>
 		/// Pixel format description
 		/// </summary>
@@ -904,12 +2259,10 @@ namespace WaylandSharp.Generated {
 		public override string InterfaceName => "wl_buffer";
 		public override int InterfaceVersion => 1;
 		protected IWlBuffer(Client owner, uint? id) : base(owner, id) {}
-		internal override void ProcessRequest(int opcode, int mlen) {
-			var tbuf = new byte[mlen];
+		internal override void ProcessRequest(int opcode, byte[] tbuf) {
 			var _offset = 0;
 			switch(opcode) {
 				case 0: {
-					Owner.Socket.Read(tbuf);
 					Destroy();
 					break;
 				}
@@ -984,35 +2337,29 @@ namespace WaylandSharp.Generated {
 				InvalidOffer = 3,
 			}
 		}
-		internal override void ProcessRequest(int opcode, int mlen) {
-			var tbuf = new byte[mlen];
+		internal override void ProcessRequest(int opcode, byte[] tbuf) {
 			var _offset = 0;
 			switch(opcode) {
 				case 0: {
-					Owner.Socket.Read(tbuf);
 					var serial = (uint) Helper.ReadUint(tbuf, ref _offset);
 					var mime_type = Helper.ReadString(tbuf, ref _offset);
 					Accept(serial, mime_type);
 					break;
 				}
 				case 1: {
-					var fd = (IntPtr) Owner.Socket.ReadWithFd(tbuf);
 					var mime_type = Helper.ReadString(tbuf, ref _offset);
-					Receive(mime_type, fd);
+					Receive(mime_type, Owner.GetNextFd());
 					break;
 				}
 				case 2: {
-					Owner.Socket.Read(tbuf);
 					Destroy();
 					break;
 				}
 				case 3: {
-					Owner.Socket.Read(tbuf);
 					Finish();
 					break;
 				}
 				case 4: {
-					Owner.Socket.Read(tbuf);
 					var dnd_actions = (uint) Helper.ReadUint(tbuf, ref _offset);
 					var preferred_action = (uint) Helper.ReadUint(tbuf, ref _offset);
 					SetActions(dnd_actions, preferred_action);
@@ -1064,7 +2411,7 @@ namespace WaylandSharp.Generated {
 		/// </remarks>
 		/// <param name="mime_type">Mime type desired by receiver</param>
 		/// <param name="fd">File descriptor for data transfer</param>
-		public abstract void Receive(string mime_type, IntPtr fd);
+		public abstract void Receive(string mime_type, int fd);
 		/// <summary>
 		/// Destroy data offer
 		/// </summary>
@@ -1239,23 +2586,19 @@ namespace WaylandSharp.Generated {
 				InvalidSource = 1,
 			}
 		}
-		internal override void ProcessRequest(int opcode, int mlen) {
-			var tbuf = new byte[mlen];
+		internal override void ProcessRequest(int opcode, byte[] tbuf) {
 			var _offset = 0;
 			switch(opcode) {
 				case 0: {
-					Owner.Socket.Read(tbuf);
 					var mime_type = Helper.ReadString(tbuf, ref _offset);
 					Offer(mime_type);
 					break;
 				}
 				case 1: {
-					Owner.Socket.Read(tbuf);
 					Destroy();
 					break;
 				}
 				case 2: {
-					Owner.Socket.Read(tbuf);
 					var dnd_actions = (uint) Helper.ReadUint(tbuf, ref _offset);
 					SetActions(dnd_actions);
 					break;
@@ -1327,7 +2670,7 @@ namespace WaylandSharp.Generated {
 		/// </remarks>
 		/// <param name="mime_type">Mime type for the data</param>
 		/// <param name="fd">File descriptor for the data</param>
-		public void Send(string mime_type, IntPtr fd) {
+		public void Send(string mime_type, int fd) {
 			var _offset = 0;
 			_offset += Helper.StringSize(mime_type);
 			var _fd = (int) fd;
@@ -1466,12 +2809,10 @@ namespace WaylandSharp.Generated {
 				Role = 0,
 			}
 		}
-		internal override void ProcessRequest(int opcode, int mlen) {
-			var tbuf = new byte[mlen];
+		internal override void ProcessRequest(int opcode, byte[] tbuf) {
 			var _offset = 0;
 			switch(opcode) {
 				case 0: {
-					Owner.Socket.Read(tbuf);
 					var source = Owner.GetObject<IWlDataSource>(Helper.ReadUint(tbuf, ref _offset));
 					var origin = Owner.GetObject<IWlSurface>(Helper.ReadUint(tbuf, ref _offset));
 					var icon = Owner.GetObject<IWlSurface>(Helper.ReadUint(tbuf, ref _offset));
@@ -1480,14 +2821,12 @@ namespace WaylandSharp.Generated {
 					break;
 				}
 				case 1: {
-					Owner.Socket.Read(tbuf);
 					var source = Owner.GetObject<IWlDataSource>(Helper.ReadUint(tbuf, ref _offset));
 					var serial = (uint) Helper.ReadUint(tbuf, ref _offset);
 					SetSelection(source, serial);
 					break;
 				}
 				case 2: {
-					Owner.Socket.Read(tbuf);
 					Release();
 					break;
 				}
@@ -1756,22 +3095,19 @@ namespace WaylandSharp.Generated {
 				Ask = 4,
 			}
 		}
-		internal override void ProcessRequest(int opcode, int mlen) {
-			var tbuf = new byte[mlen];
+		internal override void ProcessRequest(int opcode, byte[] tbuf) {
 			var _offset = 0;
 			switch(opcode) {
 				case 0: {
-					Owner.Socket.Read(tbuf);
 					var id_newid = Helper.ReadUint(tbuf, ref _offset);
-					CreateDataSource(out var id);
+					var id = CreateDataSource();
 					Owner.SetObject(id_newid, id);
 					break;
 				}
 				case 1: {
-					Owner.Socket.Read(tbuf);
 					var id_newid = Helper.ReadUint(tbuf, ref _offset);
 					var seat = Owner.GetObject<IWlSeat>(Helper.ReadUint(tbuf, ref _offset));
-					GetDataDevice(out var id, seat);
+					var id = GetDataDevice(seat);
 					Owner.SetObject(id_newid, id);
 					break;
 				}
@@ -1784,7 +3120,7 @@ namespace WaylandSharp.Generated {
 		/// Create a new data source.
 		/// </remarks>
 		/// <param name="id">Data source to create</param>
-		public abstract void CreateDataSource(out IWlDataSource id);
+		public abstract IWlDataSource CreateDataSource();
 		/// <summary>
 		/// Create a new data device
 		/// </summary>
@@ -1793,7 +3129,7 @@ namespace WaylandSharp.Generated {
 		/// </remarks>
 		/// <param name="id">Data device to create</param>
 		/// <param name="seat">Seat associated with the data device</param>
-		public abstract void GetDataDevice(out IWlDataDevice id, IWlSeat seat);
+		public abstract IWlDataDevice GetDataDevice(IWlSeat seat);
 	}
 	/// <summary>
 	/// Create desktop-style surfaces
@@ -1820,15 +3156,13 @@ namespace WaylandSharp.Generated {
 				Role = 0,
 			}
 		}
-		internal override void ProcessRequest(int opcode, int mlen) {
-			var tbuf = new byte[mlen];
+		internal override void ProcessRequest(int opcode, byte[] tbuf) {
 			var _offset = 0;
 			switch(opcode) {
 				case 0: {
-					Owner.Socket.Read(tbuf);
 					var id_newid = Helper.ReadUint(tbuf, ref _offset);
 					var surface = Owner.GetObject<IWlSurface>(Helper.ReadUint(tbuf, ref _offset));
-					GetShellSurface(out var id, surface);
+					var id = GetShellSurface(surface);
 					Owner.SetObject(id_newid, id);
 					break;
 				}
@@ -1846,7 +3180,7 @@ namespace WaylandSharp.Generated {
 		/// </remarks>
 		/// <param name="id">Shell surface to create</param>
 		/// <param name="surface">Surface to be given the shell surface role</param>
-		public abstract void GetShellSurface(out IWlShellSurface id, IWlSurface surface);
+		public abstract IWlShellSurface GetShellSurface(IWlSurface surface);
 	}
 	/// <summary>
 	/// Desktop-style metadata interface
@@ -1958,25 +3292,21 @@ namespace WaylandSharp.Generated {
 				Fill = 3,
 			}
 		}
-		internal override void ProcessRequest(int opcode, int mlen) {
-			var tbuf = new byte[mlen];
+		internal override void ProcessRequest(int opcode, byte[] tbuf) {
 			var _offset = 0;
 			switch(opcode) {
 				case 0: {
-					Owner.Socket.Read(tbuf);
 					var serial = (uint) Helper.ReadUint(tbuf, ref _offset);
 					Pong(serial);
 					break;
 				}
 				case 1: {
-					Owner.Socket.Read(tbuf);
 					var seat = Owner.GetObject<IWlSeat>(Helper.ReadUint(tbuf, ref _offset));
 					var serial = (uint) Helper.ReadUint(tbuf, ref _offset);
 					Move(seat, serial);
 					break;
 				}
 				case 2: {
-					Owner.Socket.Read(tbuf);
 					var seat = Owner.GetObject<IWlSeat>(Helper.ReadUint(tbuf, ref _offset));
 					var serial = (uint) Helper.ReadUint(tbuf, ref _offset);
 					var edges = (Enum.Resize) Helper.ReadUint(tbuf, ref _offset);
@@ -1984,12 +3314,10 @@ namespace WaylandSharp.Generated {
 					break;
 				}
 				case 3: {
-					Owner.Socket.Read(tbuf);
 					SetToplevel();
 					break;
 				}
 				case 4: {
-					Owner.Socket.Read(tbuf);
 					var parent = Owner.GetObject<IWlSurface>(Helper.ReadUint(tbuf, ref _offset));
 					var x = (int) Helper.ReadInt(tbuf, ref _offset);
 					var y = (int) Helper.ReadInt(tbuf, ref _offset);
@@ -1998,7 +3326,6 @@ namespace WaylandSharp.Generated {
 					break;
 				}
 				case 5: {
-					Owner.Socket.Read(tbuf);
 					var method = (Enum.FullscreenMethod) Helper.ReadUint(tbuf, ref _offset);
 					var framerate = (uint) Helper.ReadUint(tbuf, ref _offset);
 					var output = Owner.GetObject<IWlOutput>(Helper.ReadUint(tbuf, ref _offset));
@@ -2006,7 +3333,6 @@ namespace WaylandSharp.Generated {
 					break;
 				}
 				case 6: {
-					Owner.Socket.Read(tbuf);
 					var seat = Owner.GetObject<IWlSeat>(Helper.ReadUint(tbuf, ref _offset));
 					var serial = (uint) Helper.ReadUint(tbuf, ref _offset);
 					var parent = Owner.GetObject<IWlSurface>(Helper.ReadUint(tbuf, ref _offset));
@@ -2017,19 +3343,16 @@ namespace WaylandSharp.Generated {
 					break;
 				}
 				case 7: {
-					Owner.Socket.Read(tbuf);
 					var output = Owner.GetObject<IWlOutput>(Helper.ReadUint(tbuf, ref _offset));
 					SetMaximized(output);
 					break;
 				}
 				case 8: {
-					Owner.Socket.Read(tbuf);
 					var title = Helper.ReadString(tbuf, ref _offset);
 					SetTitle(title);
 					break;
 				}
 				case 9: {
-					Owner.Socket.Read(tbuf);
 					var class_ = Helper.ReadString(tbuf, ref _offset);
 					SetClass(class_);
 					break;
@@ -2359,17 +3682,14 @@ namespace WaylandSharp.Generated {
 				InvalidTransform = 1,
 			}
 		}
-		internal override void ProcessRequest(int opcode, int mlen) {
-			var tbuf = new byte[mlen];
+		internal override void ProcessRequest(int opcode, byte[] tbuf) {
 			var _offset = 0;
 			switch(opcode) {
 				case 0: {
-					Owner.Socket.Read(tbuf);
 					Destroy();
 					break;
 				}
 				case 1: {
-					Owner.Socket.Read(tbuf);
 					var buffer = Owner.GetObject<IWlBuffer>(Helper.ReadUint(tbuf, ref _offset));
 					var x = (int) Helper.ReadInt(tbuf, ref _offset);
 					var y = (int) Helper.ReadInt(tbuf, ref _offset);
@@ -2377,7 +3697,6 @@ namespace WaylandSharp.Generated {
 					break;
 				}
 				case 2: {
-					Owner.Socket.Read(tbuf);
 					var x = (int) Helper.ReadInt(tbuf, ref _offset);
 					var y = (int) Helper.ReadInt(tbuf, ref _offset);
 					var width = (int) Helper.ReadInt(tbuf, ref _offset);
@@ -2386,43 +3705,36 @@ namespace WaylandSharp.Generated {
 					break;
 				}
 				case 3: {
-					Owner.Socket.Read(tbuf);
 					var callback_newid = Helper.ReadUint(tbuf, ref _offset);
-					Frame(out var callback);
+					var callback = Frame();
 					Owner.SetObject(callback_newid, callback);
 					break;
 				}
 				case 4: {
-					Owner.Socket.Read(tbuf);
 					var region = Owner.GetObject<IWlRegion>(Helper.ReadUint(tbuf, ref _offset));
 					SetOpaqueRegion(region);
 					break;
 				}
 				case 5: {
-					Owner.Socket.Read(tbuf);
 					var region = Owner.GetObject<IWlRegion>(Helper.ReadUint(tbuf, ref _offset));
 					SetInputRegion(region);
 					break;
 				}
 				case 6: {
-					Owner.Socket.Read(tbuf);
 					Commit();
 					break;
 				}
 				case 7: {
-					Owner.Socket.Read(tbuf);
 					var transform = (IWlOutput.Enum.Transform) Helper.ReadInt(tbuf, ref _offset);
 					SetBufferTransform(transform);
 					break;
 				}
 				case 8: {
-					Owner.Socket.Read(tbuf);
 					var scale = (int) Helper.ReadInt(tbuf, ref _offset);
 					SetBufferScale(scale);
 					break;
 				}
 				case 9: {
-					Owner.Socket.Read(tbuf);
 					var x = (int) Helper.ReadInt(tbuf, ref _offset);
 					var y = (int) Helper.ReadInt(tbuf, ref _offset);
 					var width = (int) Helper.ReadInt(tbuf, ref _offset);
@@ -2562,7 +3874,7 @@ namespace WaylandSharp.Generated {
 		/// milliseconds, with an undefined base.
 		/// </remarks>
 		/// <param name="callback">Callback object for the frame request</param>
-		public abstract void Frame(out IWlCallback callback);
+		public abstract IWlCallback Frame();
 		/// <summary>
 		/// Set opaque region
 		/// </summary>
@@ -2828,33 +4140,28 @@ namespace WaylandSharp.Generated {
 				Touch = 4,
 			}
 		}
-		internal override void ProcessRequest(int opcode, int mlen) {
-			var tbuf = new byte[mlen];
+		internal override void ProcessRequest(int opcode, byte[] tbuf) {
 			var _offset = 0;
 			switch(opcode) {
 				case 0: {
-					Owner.Socket.Read(tbuf);
 					var id_newid = Helper.ReadUint(tbuf, ref _offset);
-					GetPointer(out var id);
+					var id = GetPointer();
 					Owner.SetObject(id_newid, id);
 					break;
 				}
 				case 1: {
-					Owner.Socket.Read(tbuf);
 					var id_newid = Helper.ReadUint(tbuf, ref _offset);
-					GetKeyboard(out var id);
+					var id = GetKeyboard();
 					Owner.SetObject(id_newid, id);
 					break;
 				}
 				case 2: {
-					Owner.Socket.Read(tbuf);
 					var id_newid = Helper.ReadUint(tbuf, ref _offset);
-					GetTouch(out var id);
+					var id = GetTouch();
 					Owner.SetObject(id_newid, id);
 					break;
 				}
 				case 3: {
-					Owner.Socket.Read(tbuf);
 					Release();
 					break;
 				}
@@ -2873,7 +4180,7 @@ namespace WaylandSharp.Generated {
 		/// never had the pointer capability.
 		/// </remarks>
 		/// <param name="id">Seat pointer</param>
-		public abstract void GetPointer(out IWlPointer id);
+		public abstract IWlPointer GetPointer();
 		/// <summary>
 		/// Return keyboard object
 		/// </summary>
@@ -2887,7 +4194,7 @@ namespace WaylandSharp.Generated {
 		/// never had the keyboard capability.
 		/// </remarks>
 		/// <param name="id">Seat keyboard</param>
-		public abstract void GetKeyboard(out IWlKeyboard id);
+		public abstract IWlKeyboard GetKeyboard();
 		/// <summary>
 		/// Return touch object
 		/// </summary>
@@ -2901,7 +4208,7 @@ namespace WaylandSharp.Generated {
 		/// never had the touch capability.
 		/// </remarks>
 		/// <param name="id">Seat touch interface</param>
-		public abstract void GetTouch(out IWlTouch id);
+		public abstract IWlTouch GetTouch();
 		/// <summary>
 		/// Release the seat object
 		/// </summary>
@@ -3063,12 +4370,10 @@ namespace WaylandSharp.Generated {
 				WheelTilt = 3,
 			}
 		}
-		internal override void ProcessRequest(int opcode, int mlen) {
-			var tbuf = new byte[mlen];
+		internal override void ProcessRequest(int opcode, byte[] tbuf) {
 			var _offset = 0;
 			switch(opcode) {
 				case 0: {
-					Owner.Socket.Read(tbuf);
 					var serial = (uint) Helper.ReadUint(tbuf, ref _offset);
 					var surface = Owner.GetObject<IWlSurface>(Helper.ReadUint(tbuf, ref _offset));
 					var hotspot_x = (int) Helper.ReadInt(tbuf, ref _offset);
@@ -3077,7 +4382,6 @@ namespace WaylandSharp.Generated {
 					break;
 				}
 				case 1: {
-					Owner.Socket.Read(tbuf);
 					Release();
 					break;
 				}
@@ -3487,12 +4791,10 @@ namespace WaylandSharp.Generated {
 				Pressed = 1,
 			}
 		}
-		internal override void ProcessRequest(int opcode, int mlen) {
-			var tbuf = new byte[mlen];
+		internal override void ProcessRequest(int opcode, byte[] tbuf) {
 			var _offset = 0;
 			switch(opcode) {
 				case 0: {
-					Owner.Socket.Read(tbuf);
 					Release();
 					break;
 				}
@@ -3518,7 +4820,7 @@ namespace WaylandSharp.Generated {
 		/// <param name="format">Keymap format</param>
 		/// <param name="fd">Keymap file descriptor</param>
 		/// <param name="size">Keymap size, in bytes</param>
-		public void Keymap(Enum.KeymapFormat format, IntPtr fd, uint size) {
+		public void Keymap(Enum.KeymapFormat format, int fd, uint size) {
 			var _offset = 0;
 			_offset += 4;
 			var _fd = (int) fd;
@@ -3543,10 +4845,12 @@ namespace WaylandSharp.Generated {
 			var _offset = 0;
 			_offset += 4;
 			_offset += 4;
+			_offset += Helper.ArraySize(keys);
 			var tbuf = new byte[_offset];
 			_offset = 0;
 			Helper.WriteUint(tbuf, ref _offset, (uint) serial);
 			Helper.WriteUint(tbuf, ref _offset, surface.Id);
+			Helper.WriteArray(tbuf, ref _offset, keys);
 			SendEvent(1, tbuf);
 		}
 		/// <summary>
@@ -3672,12 +4976,10 @@ namespace WaylandSharp.Generated {
 		public override string InterfaceName => "wl_touch";
 		public override int InterfaceVersion => 7;
 		protected IWlTouch(Client owner, uint? id) : base(owner, id) {}
-		internal override void ProcessRequest(int opcode, int mlen) {
-			var tbuf = new byte[mlen];
+		internal override void ProcessRequest(int opcode, byte[] tbuf) {
 			var _offset = 0;
 			switch(opcode) {
 				case 0: {
-					Owner.Socket.Read(tbuf);
 					Release();
 					break;
 				}
@@ -4010,12 +5312,10 @@ namespace WaylandSharp.Generated {
 				Preferred = 0x2,
 			}
 		}
-		internal override void ProcessRequest(int opcode, int mlen) {
-			var tbuf = new byte[mlen];
+		internal override void ProcessRequest(int opcode, byte[] tbuf) {
 			var _offset = 0;
 			switch(opcode) {
 				case 0: {
-					Owner.Socket.Read(tbuf);
 					Release();
 					break;
 				}
@@ -4188,17 +5488,14 @@ namespace WaylandSharp.Generated {
 		public override string InterfaceName => "wl_region";
 		public override int InterfaceVersion => 1;
 		protected IWlRegion(Client owner, uint? id) : base(owner, id) {}
-		internal override void ProcessRequest(int opcode, int mlen) {
-			var tbuf = new byte[mlen];
+		internal override void ProcessRequest(int opcode, byte[] tbuf) {
 			var _offset = 0;
 			switch(opcode) {
 				case 0: {
-					Owner.Socket.Read(tbuf);
 					Destroy();
 					break;
 				}
 				case 1: {
-					Owner.Socket.Read(tbuf);
 					var x = (int) Helper.ReadInt(tbuf, ref _offset);
 					var y = (int) Helper.ReadInt(tbuf, ref _offset);
 					var width = (int) Helper.ReadInt(tbuf, ref _offset);
@@ -4207,7 +5504,6 @@ namespace WaylandSharp.Generated {
 					break;
 				}
 				case 2: {
-					Owner.Socket.Read(tbuf);
 					var x = (int) Helper.ReadInt(tbuf, ref _offset);
 					var y = (int) Helper.ReadInt(tbuf, ref _offset);
 					var width = (int) Helper.ReadInt(tbuf, ref _offset);
@@ -4283,21 +5579,18 @@ namespace WaylandSharp.Generated {
 				BadSurface = 0,
 			}
 		}
-		internal override void ProcessRequest(int opcode, int mlen) {
-			var tbuf = new byte[mlen];
+		internal override void ProcessRequest(int opcode, byte[] tbuf) {
 			var _offset = 0;
 			switch(opcode) {
 				case 0: {
-					Owner.Socket.Read(tbuf);
 					Destroy();
 					break;
 				}
 				case 1: {
-					Owner.Socket.Read(tbuf);
 					var id_newid = Helper.ReadUint(tbuf, ref _offset);
 					var surface = Owner.GetObject<IWlSurface>(Helper.ReadUint(tbuf, ref _offset));
 					var parent = Owner.GetObject<IWlSurface>(Helper.ReadUint(tbuf, ref _offset));
-					GetSubsurface(out var id, surface, parent);
+					var id = GetSubsurface(surface, parent);
 					Owner.SetObject(id_newid, id);
 					break;
 				}
@@ -4335,7 +5628,7 @@ namespace WaylandSharp.Generated {
 		/// <param name="id">The new sub-surface object ID</param>
 		/// <param name="surface">The surface to be turned into a sub-surface</param>
 		/// <param name="parent">The parent surface</param>
-		public abstract void GetSubsurface(out IWlSubsurface id, IWlSurface surface, IWlSurface parent);
+		public abstract IWlSubsurface GetSubsurface(IWlSurface surface, IWlSurface parent);
 	}
 	/// <summary>
 	/// Sub-surface interface to a wl_surface
@@ -4403,41 +5696,34 @@ namespace WaylandSharp.Generated {
 				BadSurface = 0,
 			}
 		}
-		internal override void ProcessRequest(int opcode, int mlen) {
-			var tbuf = new byte[mlen];
+		internal override void ProcessRequest(int opcode, byte[] tbuf) {
 			var _offset = 0;
 			switch(opcode) {
 				case 0: {
-					Owner.Socket.Read(tbuf);
 					Destroy();
 					break;
 				}
 				case 1: {
-					Owner.Socket.Read(tbuf);
 					var x = (int) Helper.ReadInt(tbuf, ref _offset);
 					var y = (int) Helper.ReadInt(tbuf, ref _offset);
 					SetPosition(x, y);
 					break;
 				}
 				case 2: {
-					Owner.Socket.Read(tbuf);
 					var sibling = Owner.GetObject<IWlSurface>(Helper.ReadUint(tbuf, ref _offset));
 					PlaceAbove(sibling);
 					break;
 				}
 				case 3: {
-					Owner.Socket.Read(tbuf);
 					var sibling = Owner.GetObject<IWlSurface>(Helper.ReadUint(tbuf, ref _offset));
 					PlaceBelow(sibling);
 					break;
 				}
 				case 4: {
-					Owner.Socket.Read(tbuf);
 					SetSync();
 					break;
 				}
 				case 5: {
-					Owner.Socket.Read(tbuf);
 					SetDesync();
 					break;
 				}
