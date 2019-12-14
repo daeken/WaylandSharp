@@ -199,10 +199,10 @@ def generate(fn):
 					pre.append('_offset += Helper.ArraySize(%s);' % name)
 					post.append('Helper.WriteArray(tbuf, ref _offset, %s);' % name)
 				elif type == 'fd':
-					ctype = 'int'
+					ctype = 'byte[]'
 					assert not hasFd
 					hasFd = True
-					pre.append('var _fd = (int) %s;' % name)
+					pre.append('var _fd = (byte[]) %s;' % name)
 				elif type == 'string':
 					ctype = 'string'
 					pre.append('_offset += Helper.StringSize(%s);' % name)

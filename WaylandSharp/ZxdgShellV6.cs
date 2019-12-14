@@ -53,7 +53,7 @@ namespace WaylandSharp {
 		public void Commit() {
 			Helper.Log($"ZxdgToplevelV6 committed! {BeenSetup}");
 			if(!BeenSetup) {
-				Configure(640, 480, new byte[0]);
+				Configure(960, 720, BitConverter.GetBytes((uint) Enum.State.Activated));
 				Surface.Configure(Owner.Serial);
 				BeenSetup = true;
 			}

@@ -2670,10 +2670,10 @@ namespace WaylandSharp.Generated {
 		/// </remarks>
 		/// <param name="mime_type">Mime type for the data</param>
 		/// <param name="fd">File descriptor for the data</param>
-		public void Send(string mime_type, int fd) {
+		public void Send(string mime_type, byte[] fd) {
 			var _offset = 0;
 			_offset += Helper.StringSize(mime_type);
-			var _fd = (int) fd;
+			var _fd = (byte[]) fd;
 			var tbuf = new byte[_offset];
 			_offset = 0;
 			Helper.WriteString(tbuf, ref _offset, mime_type);
@@ -4820,10 +4820,10 @@ namespace WaylandSharp.Generated {
 		/// <param name="format">Keymap format</param>
 		/// <param name="fd">Keymap file descriptor</param>
 		/// <param name="size">Keymap size, in bytes</param>
-		public void Keymap(Enum.KeymapFormat format, int fd, uint size) {
+		public void Keymap(Enum.KeymapFormat format, byte[] fd, uint size) {
 			var _offset = 0;
 			_offset += 4;
-			var _fd = (int) fd;
+			var _fd = (byte[]) fd;
 			_offset += 4;
 			var tbuf = new byte[_offset];
 			_offset = 0;
@@ -4899,6 +4899,7 @@ namespace WaylandSharp.Generated {
 			Helper.WriteUint(tbuf, ref _offset, (uint) time);
 			Helper.WriteUint(tbuf, ref _offset, (uint) key);
 			Helper.WriteUint(tbuf, ref _offset, (uint) state);
+			Helper.Log("Key!");
 			SendEvent(3, tbuf);
 		}
 		/// <summary>

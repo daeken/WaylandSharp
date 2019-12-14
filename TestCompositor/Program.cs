@@ -15,7 +15,15 @@ namespace TestCompositor {
 				client.AddGlobal(new ZxdgShellV6(client));
 				client.AddGlobal(new WlOutput(client));
 			};
-			server.Run();
+			server.ImageDataBuilder = (bytes, i, arg3, arg4, arg5, arg6) => null;
+			var iter = 0;
+			while(true) {
+				server.Process();
+				if(iter++ == 1000) {
+					iter = 0;
+					server.OnFrame();
+				}
+			}
 		}
 	}
 }

@@ -92,5 +92,7 @@ namespace WaylandSharp {
 		}
 
 		internal static void Log<T>(T log) => DisplayServer.Instance.Log(log.ToString());
+
+		internal static void Error<T>(T log) => DisplayServer.Instance.Error(log.ToString());
 	}
 }

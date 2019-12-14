@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace WaylandSharp {
 	public class Client {
-		enum WmsgType {
+		internal enum WmsgType {
 			Protocol, 
 			InjectRids, 
 			OpenFile, 
@@ -40,6 +40,11 @@ namespace WaylandSharp {
 
 		public readonly IDictionary<int, byte[]> Files = new Dictionary<int, byte[]>();
 		internal readonly Queue<int> Rids = new Queue<int>();
+		internal int ServerFd = 0x1000;
+
+		public event Action<WlSurface> NewSurface;
+
+		internal void AddSurface(WlSurface surface) => NewSurface?.Invoke(surface);
 		
 		public Client(Socket socket) {
 			Socket = socket;
@@ -85,8 +90,7 @@ namespace WaylandSharp {
 									var tbuf = new byte[length - 8];
 									Array.Copy(abuf, offset, tbuf, 0, length - 8);
 									DisplayServer.Instance.WorkQueue.Enqueue((GetObject<IWaylandObject>(id), opcode,
-										tbuf,
-										cbt));
+										tbuf, cbt));
 									cbt.Task.Wait();
 									if(cbt.Task.Result != null)
 										throw cbt.Task.Result;
@@ -111,6 +115,24 @@ namespace WaylandSharp {
 								Array.Copy(abuf, 12, Files[fd], start, end - start);
 								break;
 							}
+							case WmsgType.BufferDiff: {
+								Helper.Log("Buffer diff!");
+								var fd = BitConverter.ToInt32(abuf, 0);
+								var diffSize = BitConverter.ToUInt32(abuf, 4);
+								var ntrailing = BitConverter.ToUInt32(abuf, 8);
+								var tbuffer = Files[fd];
+								for(var i = 12; i < 12 + diffSize; ) {
+									var nfrom = BitConverter.ToUInt32(abuf, i);
+									var nto = BitConverter.ToUInt32(abuf, i + 4);
+									Array.Copy(abuf, i + 8, tbuffer, nfrom * 4, (nto - nfrom) * 4);
+									i += (int) (8 + (nto - nfrom) * 4);
+								}
+								if(ntrailing > 0) {
+									var offset = tbuffer.Length - (int) ntrailing * 4;
+									Array.Copy(abuf, 12 + diffSize, tbuffer, offset, ntrailing * 4);
+								}
+								break;
+							}
 							case WmsgType.InjectRids: {
 								var offset = 0;
 								while(offset < size - 4) {
@@ -129,7 +151,7 @@ namespace WaylandSharp {
 								Array.Copy(BitConverter.GetBytes(((uint) WmsgType.AckNBlocks) | (8 << 5)), 0, ackbuf, 0,
 									4);
 								Array.Copy(BitConverter.GetBytes(msgcount), 0, ackbuf, 4, 4);
-								Socket.Send(ackbuf);
+								Socket.SendAll(ackbuf); // TODO: This could happen at the same time as an event; bad.
 								break;
 							default:
 								throw new NotImplementedException(
@@ -137,8 +159,7 @@ namespace WaylandSharp {
 						}
 					}
 				} catch(Exception e) {
-					Helper.Log("Client got exception; disconnecting");
-					Helper.Log(e);
+					Helper.Error("Client got exception; disconnecting\n" + e.ToString());
 				}
 			}).Start();
 		
@@ -155,6 +176,8 @@ namespace WaylandSharp {
 			obj.Id = id;
 			obj.Setup();
 		}
+
+		public void Destroy(IWaylandObject obj) => Objects.Remove(obj.Id);
 
 		public void AddGlobal(IWaylandObject obj) => Registry.Add(obj);
 	}

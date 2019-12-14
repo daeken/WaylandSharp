@@ -42,6 +42,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CompositorInterface.cs" />
     <Compile Include="Client.cs" />
     <Compile Include="DenseIds.cs" />
     <Compile Include="DisplayServer.cs" />
@@ -56,9 +57,11 @@
     <Compile Include="WlCallback.cs" />
     <Compile Include="WlCompositor.cs" />
     <Compile Include="WlDisplay.cs" />
+    <Compile Include="WlKeyboard.cs" />
     <Compile Include="WlOutput.cs" />
     <Compile Include="WlRegion.cs" />
     <Compile Include="WlRegistry.cs" />
+    <Compile Include="WlSeat.cs" />
     <Compile Include="WlShm.cs" />
     <Compile Include="WlSubcompositor.cs" />
     <Compile Include="WlSurface.cs" />

@@ -8,13 +8,26 @@ namespace WaylandSharp {
 	
 	public class WlSurface : IWlSurface {
 		internal ICommitter Committer;
-		IWlBuffer Buffer;
-		public WlSurface(Client owner, uint? id = null) : base(owner, id) { }
-		
-		public override void Destroy() => throw new System.NotImplementedException();
+		WlBuffer Buffer;
+
+		WlCallback CurrentFrameCallback, PendingFrameCallback;
+
+		public WlSurface(Client owner, uint? id = null) : base(owner, id) => 
+			DisplayServer.Instance.Frame += () => {
+				if(CurrentFrameCallback == null) return;
+				CurrentFrameCallback.Done(DisplayServer.Instance.Time);
+				Owner.Destroy(CurrentFrameCallback);
+				CurrentFrameCallback = null;
+			};
+
+		internal override void Setup() => Owner.AddSurface(this);
+
+		public override void Destroy() => throw new NotImplementedException();
 		public override void Attach(IWlBuffer buffer, int x, int y) {
 			Helper.Log($"Attempting to attach buffer to {x}x{y}");
-			Buffer = buffer;
+			Buffer = (WlBuffer) buffer;
+			var id = DisplayServer.Instance.ImageDataBuilder(Buffer.Buffer, Buffer.Offset, Buffer.Width, Buffer.Height,
+				Buffer.Stride, Buffer.Format);
 		}
 
 		public override void Damage(int x, int y, int width, int height) {
@@ -22,15 +35,19 @@ namespace WaylandSharp {
 			Buffer?.Release();
 		}
 
-		public override IWlCallback Frame() =>
-			new WlCallback(Owner, cb => DisplayServer.Instance.Frame += () => cb.Done(Owner.Serial));
-		public override void SetOpaqueRegion(IWlRegion region) => Helper.Log($"Setting opaque region");
-		public override void SetInputRegion(IWlRegion region) => Helper.Log($"Setting input region");
+		public override IWlCallback Frame() => CurrentFrameCallback = new WlCallback(Owner);
+
+		public override void SetOpaqueRegion(IWlRegion region) => Helper.Log($"Setting opaque region -- {((WlRegion) region)?.Region}");
+		public override void SetInputRegion(IWlRegion region) => Helper.Log($"Setting input region for ID 0x{Id}");
 		
 		public override void Commit() {
 			Helper.Log("WlSurface commit!");
 			if(Committer != null)
 				Committer.Commit();
+			if(PendingFrameCallback != null) {
+				CurrentFrameCallback = PendingFrameCallback;
+				PendingFrameCallback = null;
+			}
 		}
 
 		public override void SetBufferTransform(IWlOutput.Enum.Transform transform) => throw new System.NotImplementedException();

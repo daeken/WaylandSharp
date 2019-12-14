@@ -6,9 +6,8 @@ namespace WaylandSharp {
 	internal static class Extensions {
 		const string Printable = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-[]{}`~!@#$%^&*()-=\\|;:'\",./<>?";
 		internal static void Hexdump(this byte[] buffer) {
-			var ret = "";
 			for(var i = 0; i < buffer.Length; i += 16) {
-				ret += $"{i:X4} | ";
+				var ret = $"{i:X4} | ";
 				for(var j = 0; j < 16; ++j) {
 					ret += i + j >= buffer.Length ? $"   " : $"{buffer[i + j]:X2} ";
 					if(j == 7) ret += " ";
@@ -29,6 +28,17 @@ namespace WaylandSharp {
 			var offset = 0;
 			while(tlen > 0) {
 				var rlen = socket.Receive(buf, offset, tlen, SocketFlags.None);
+				if(rlen < 0) throw new Exception();
+				offset += rlen;
+				tlen -= rlen;
+			}
+		}
+
+		internal static void SendAll(this Socket socket, byte[] buf) {
+			var tlen = buf.Length;
+			var offset = 0;
+			while(tlen > 0) {
+				var rlen = socket.Send(buf, offset, tlen, SocketFlags.None);
 				if(rlen < 0) throw new Exception();
 				offset += rlen;
 				tlen -= rlen;
